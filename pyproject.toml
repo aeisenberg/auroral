@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "auroral"
+version = "1.0.0"
+authors = [
+  { name="Vincent Therrien", email="therrien.vincent.2@courrier.uqam.ca" },
+]
+description = "A reinforcement learning game"
+readme = "readme.rst"
+requires-python = ">=3.10"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: MIT License",
+    "Operating System :: OS Independent",
+]
+dynamic = ["dependencies"]
+keywords = [
+    "reinforcement learning", "deep learning", "machine learning"
+]
+
+[tool.setuptools]
+
+[tool.setuptools.dynamic]
+dependencies = {file = ["requirements.txt"]}
+
+[project.urls]
+"Homepage" = "https://github.com/Vincent-Therrien/auroral"
+"repository" = "https://github.com/Vincent-Therrien/auroral"
