@@ -13,18 +13,21 @@ import pygame
 import environment
 
 
-def load_resources(directory: str, config_file: str):
+def load_resources(directory: str, config_file: str, theme: str):
+    theme_directory = directory + "/themes/" + theme + "/"
     images = {
-        "tilemap": pygame.image.load(directory + 'tilemap.png'),
-        "objects": pygame.image.load(directory + 'objects.png'),
-        "agents": pygame.image.load(directory + 'agents.png')
+        "tilemap": pygame.image.load(theme_directory + 'tilemap.png'),
+        "objects": pygame.image.load(theme_directory + 'objects.png'),
+        "agents": pygame.image.load(directory + 'agents.png'),
+        "projectiles": pygame.image.load(directory + 'projectiles.png'),
     }
     with open(config_file) as f:
         content = json.load(f)
     matches = {
         "tilemap": content["tilemap_image"],
         "objects": content["object_image"],
-        "agents": content["agent_image"]
+        "agents": content["agent_image"],
+        "projectiles": content["projectile_image"]
     }
     return {"images": images, "matches": matches}
 
@@ -38,8 +41,14 @@ def clamp(n, min, max):
         return n
 
 
-def render(env: environment.Environment, screen, resources, dimension, camera: list = [0, 0]):
-    N = 32
+def render(
+        env: environment.Environment,
+        screen,
+        resources,
+        dimension,
+        camera: list = [0, 0],
+        N: int = 32
+    ):
     X_MAX = len(env.tilemap[0])
     Y_MAX = len(env.tilemap)
     col_min = int(camera[0]) - int(dimension[1] / 2)
@@ -63,7 +72,7 @@ def render(env: environment.Environment, screen, resources, dimension, camera: l
             screen.blit(
                 resources["images"]["tilemap"],
                 (j * N + x_o, i * N + y_o),
-                (ix + (ix * N) + 1, iy + (iy * N) + 1, 32, 32)
+                (ix + (ix * N) + 1, iy + (iy * N) + 1,N, N)
             )
     # Objects
     for i in range(len(env.objects)):
@@ -76,7 +85,7 @@ def render(env: environment.Environment, screen, resources, dimension, camera: l
             screen.blit(
                 resources["images"]["objects"],
                 (j * N + x_o, i * N + y_o),
-                (ix + (ix * N) + 1, iy + (iy * N) + 1, 32, 32)
+                (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
             )
     # Agents
     for name, agent in env.agents:
@@ -85,6 +94,15 @@ def render(env: environment.Environment, screen, resources, dimension, camera: l
         o = agent.offset * N
         screen.blit(
             resources["images"]["agents"],
-            (agent.position[0] * N - o + x_o, agent.position[1] * N - o + y_o),
-            (ix + (ix * N) + 1, iy + (iy * N) + 1, 32, 32)
+            (agent.position.x * N - o + x_o, agent.position.y * N - o + y_o),
+            (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+        )
+    # Projectiles
+    for p in env.projectiles:
+        ix = resources["matches"]["projectiles"][p.name][1]
+        iy = resources["matches"]["projectiles"][p.name][0]
+        screen.blit(
+            resources["images"]["projectiles"],
+            (p.position.x * N + x_o, p.position.y * N + y_o),
+            (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
         )
