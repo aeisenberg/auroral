@@ -12,6 +12,11 @@ import pygame
 
 import environment
 
+WHITE = (255, 255, 255)
+BLUE = (0, 0, 255)
+RED = (255, 0, 0)
+BLACK = (0, 0, 0)
+
 
 def load_resources(directory: str, config_file: str, theme: str):
     theme_directory = directory + "/themes/" + theme + "/"
@@ -101,8 +106,42 @@ def render(
     for p in env.projectiles:
         ix = resources["matches"]["projectiles"][p.name][1]
         iy = resources["matches"]["projectiles"][p.name][0]
-        screen.blit(
+        s = pygame.Surface((N, N), pygame.SRCALPHA)
+        P = 2
+        s.blit(
             resources["images"]["projectiles"],
-            (p.position.x * N + x_o, p.position.y * N + y_o),
-            (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+            (0, 0),
+            (ix + (ix * N) + (P / 2), iy + (iy * N) + (P / 2), N - P, N - P)
         )
+        screen.blit(
+            pygame.transform.rotate(s, p.get_rotation()),
+            (p.position.x * N + x_o, p.position.y * N + y_o),
+        )
+    # Game information.
+    pygame.draw.rect(screen, BLACK, (6, 6, 128, 16))
+    pygame.draw.rect(screen, BLUE, (8, 8, env.get_player().magic * 124, 12))
+    pygame.draw.rect(screen, BLACK, (6, 24, 128, 16))
+    pygame.draw.rect(screen, RED, (8, 26, env.get_player().health_points * 124, 12))
+
+
+def render_debug(
+        env: environment.Environment,
+        screen,
+        dimension,
+        delta,
+        delta_buffer,
+        font
+    ):
+    if delta == 0.0:
+        fps = "N/A"
+    else:
+        fps = f"{(1.0 / delta):.6}"
+    text_surface = font.render("FPS: " + fps, False, (0, 0, 0))
+    screen.blit(text_surface, (6, 48))
+    avg_delta = sum(delta_buffer) / len(delta_buffer)
+    if avg_delta == 0.0:
+        fps = "N/A"
+    else:
+        fps = f"{(1.0 / avg_delta):.6}"
+    text_surface = font.render("Avg. FPS: " + fps, False, (0, 0, 0))
+    screen.blit(text_surface, (6, 70))

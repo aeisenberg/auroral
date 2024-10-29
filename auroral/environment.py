@@ -9,6 +9,7 @@ File information:
 
 import json
 import numpy as np
+from math import atan, pi
 
 
 def load(level_filename: str) -> tuple:
@@ -68,7 +69,7 @@ class Agent:
         self.offset = (1.0 - self.s) / 2.0
         if self.offset < 0.0:
             self.offset = 0.0
-        self.health_points = 3.0
+        self.health_points = 1.0
         self.magic = 1.0
         self.action = None
         self.MAGIC_SPEED = 0.0
@@ -85,16 +86,18 @@ class Agent:
 class PlayerAgent(Agent):
     def __init__(self, properties):
         Agent.__init__(self, properties)
-        self.MAGIC_SPEED = 0.1
+        self.MAGIC_SPEED = 0.05
         self.speed = 4.0
 
     def fire(self):
-        self.action = {"action": "fire", "direction": self.direction}
-        self.magic -= 0.2
+        if self.magic > 0.0:
+            self.action = {"action": "fire", "direction": self.direction}
+            self.magic -= 0.2
 
     def freeze(self):
-        self.action = {"action": "freeze", "direction": self.direction}
-        self.magic -= 0.5
+        if self.magic > 0.0:
+            self.action = {"action": "freeze", "direction": self.direction}
+            self.magic -= 0.5
 
 
 class Projectile:
@@ -106,13 +109,20 @@ class Projectile:
         self.exploded = False
         self.lifetime = 3.0
         if self.name == "fire":
-            self.speed = 10.0
+            self.speed = 15.0
 
     def update(self, delta):
         self.position += self.direction * self.speed * delta
         self.lifetime -= delta
         if self.lifetime < 0.0:
             self.exploded = True
+
+    def get_rotation(self):
+        d = self.direction.x if self.direction.x != 0.0 else 0.01
+        r = -1.0 * atan(self.direction.y / d)
+        if self.direction.x < 0.0:
+            r += pi
+        return r * 180.0 / pi - 90.0
 
     def explode(self):
         self.exploded = True
@@ -132,15 +142,14 @@ class Environment:
         for k, v in agents.items():
             if k == "player":
                 self.agents.append((k, PlayerAgent(v)))
+                self.player = self.agents[-1][1]
             else:
                 self.agents.append((k, Agent(v)))
         self.collisions = np.zeros((len(self.tilemap), len(self.tilemap[0])))
         self.refresh_collisions()
 
     def get_player(self) -> Agent:
-        for k, v in self.agents:
-            if k == "player":
-                return v
+        return self.player
 
     def refresh_collisions(self):
         for i in range(len(self.tilemap)):

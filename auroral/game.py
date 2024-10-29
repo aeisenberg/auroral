@@ -10,6 +10,8 @@ File information:
 import os
 import pygame
 import time
+import argparse
+from collections import deque
 
 import environment
 import renderer
@@ -19,6 +21,15 @@ abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
 os.chdir(dname)
 
+parser = argparse.ArgumentParser()
+parser.add_argument("-d", "--debug", help="Add debug information.",
+                    action="store_true")
+args = parser.parse_args()
+DEBUG = args.debug
+if DEBUG:
+    pygame.font.init()
+    font = pygame.font.SysFont('Comic Sans MS', 24)
+    delta_buffer = deque(maxlen=100)
 
 ENVIRONMENT_FILE = "../assets/levels/test.json"
 MATCHES_FILE = "../assets/matches.json"
@@ -74,6 +85,14 @@ while True:
         (position.x, position.y),
         TILE_SIZE
     )
+    if DEBUG:
+        delta_buffer.append(delta)
+        renderer.render_debug(
+            env,
+            screen,
+            SCREEN_DIMENSIONS,
+            delta,
+            delta_buffer,
+            font
+        )
     pygame.display.update()
-    if delta > 0.0:
-        print(f"FPS: {1.0 / delta}")
