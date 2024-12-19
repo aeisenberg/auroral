@@ -24,17 +24,28 @@ def load_resources(directory: str, config_file: str, theme: str):
         "tilemap": pygame.image.load(theme_directory + 'tilemap.png'),
         "objects": pygame.image.load(theme_directory + 'objects.png'),
         "agents": pygame.image.load(directory + 'agents.png'),
+        "water": pygame.image.load(directory + 'water.png'),
         "projectiles": pygame.image.load(directory + 'projectiles.png'),
     }
     with open(config_file) as f:
         content = json.load(f)
     matches = {
         "tilemap": content["tilemap_image"],
+        "tiles": content["tile_equivalences"],
         "objects": content["object_image"],
         "agents": content["agent_image"],
-        "projectiles": content["projectile_image"]
+        "projectiles": content["projectile_image"],
     }
     return {"images": images, "matches": matches}
+
+
+def get_agent_orientation(angle: float, N: float) -> tuple:
+    """Returns an image coordinate pair corresponding to the orientation of
+    an agent."""
+    if angle < 0:
+        angle += 360
+    i = int(angle / 45.0 - 0.5)
+    return i + (i * N)
 
 
 def clamp(n, min, max):
@@ -46,14 +57,21 @@ def clamp(n, min, max):
         return n
 
 
+period = 0.0
+
+
 def render(
         env: environment.Environment,
         screen,
         resources,
         dimension,
         camera: list = [0, 0],
-        N: int = 32
+        N: int = 32,
+        delta: float = 0.0
     ):
+    global period
+    period += delta
+
     X_MAX = len(env.tilemap[0])
     Y_MAX = len(env.tilemap)
     col_min = int(camera[0]) - int(dimension[1] / 2)
@@ -72,10 +90,16 @@ def render(
     for i in range(row_min, row_max):
         for j in range(col_min, col_max):
             v = str(env.tilemap[i][j])
-            ix = resources["matches"]["tilemap"][v][1]
-            iy = resources["matches"]["tilemap"][v][0]
+            if v == resources["matches"]["tiles"]["water"]:
+                iy = 0
+                ix = int(period * 6 % 5)
+                image = resources["images"]["water"]
+            else:
+                ix = resources["matches"]["tilemap"][v][1]
+                iy = resources["matches"]["tilemap"][v][0]
+                image = resources["images"]["tilemap"]
             screen.blit(
-                resources["images"]["tilemap"],
+                image,
                 (j * N + x_o, i * N + y_o),
                 (ix + (ix * N) + 1, iy + (iy * N) + 1,N, N)
             )
@@ -100,8 +124,9 @@ def render(
         screen.blit(
             resources["images"]["agents"],
             (agent.position.x * N - o + x_o, agent.position.y * N - o + y_o),
-            (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+            (get_agent_orientation(agent.get_rotation(), N) + 1, iy + 1, N, N)
         )
+        get_agent_orientation(agent.get_rotation(), N)
     # Projectiles
     for p in env.projectiles:
         ix = resources["matches"]["projectiles"][p.name][1]

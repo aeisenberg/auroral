@@ -39,7 +39,7 @@ References
 ``````````
 
 Tilemap: https://opengameart.org/content/zelda-like-tilesets-and-sprites
-
+Water: https://kidscancode.org/godot_recipes/3.x/2d/tilemap_animation/index.html
 
 Un jeu 2D pour l'apprentissage par renforcement
 -----------------------------------------------

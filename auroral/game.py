@@ -14,6 +14,7 @@ import argparse
 from collections import deque
 
 import environment
+from environment import Vector
 import renderer
 
 
@@ -29,7 +30,7 @@ DEBUG = args.debug
 if DEBUG:
     pygame.font.init()
     font = pygame.font.SysFont('Comic Sans MS', 24)
-    delta_buffer = deque(maxlen=100)
+    delta_buffer = deque(maxlen=500)
 
 ENVIRONMENT_FILE = "../assets/levels/test.json"
 MATCHES_FILE = "../assets/matches.json"
@@ -47,6 +48,8 @@ screen = pygame.display.set_mode(SCREEN_DIMENSIONS)
 
 ti = time.time()
 
+direction = Vector(0.0, 0.0)
+
 while True:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -54,24 +57,26 @@ while True:
             exit()
         if event.type == pygame.KEYDOWN:
             if event.key in (pygame.K_LEFT, pygame.K_a):
-                player.direction.x = -1.0
+                direction.x -= 1.0
             if event.key in (pygame.K_RIGHT, pygame.K_d):
-                player.direction.x = 1.0
+                direction.x += 1.0
             if event.key in (pygame.K_UP, pygame.K_w):
-                player.direction.y = -1.0
+                direction.y -= 1.0
             if event.key in (pygame.K_DOWN, pygame.K_s):
-                player.direction.y = 1.0
+                direction.y += 1.0
             if event.key in (pygame.K_p, ):
                 player.fire()
         elif event.type == pygame.KEYUP:
-            if event.key in (pygame.K_LEFT, pygame.K_a) and player.direction.x < 0:
-                player.direction.x = 0
-            if event.key in (pygame.K_RIGHT, pygame.K_d) and player.direction.x > 0:
-                player.direction.x -= 1.0
-            if event.key in (pygame.K_UP, pygame.K_w) and player.direction.y < 0:
-                player.direction.y = 0
-            if event.key in (pygame.K_DOWN, pygame.K_s) and player.direction.y > 0:
-                player.direction.y = 0
+            if event.key in (pygame.K_LEFT, pygame.K_a):
+                direction.x += 1.0
+            if event.key in (pygame.K_RIGHT, pygame.K_d):
+                direction.x -= 1.0
+            if event.key in (pygame.K_UP, pygame.K_w):
+                direction.y += 1.0
+            if event.key in (pygame.K_DOWN, pygame.K_s):
+                direction.y -= 1.0
+        player.direction = direction.copy()
+        player.direction.normalize()
     now = time.time()
     delta = now - ti
     ti = now
@@ -83,7 +88,8 @@ while True:
         resources,
         SCREEN_DIMENSIONS,
         (position.x, position.y),
-        TILE_SIZE
+        TILE_SIZE,
+        delta
     )
     if DEBUG:
         delta_buffer.append(delta)

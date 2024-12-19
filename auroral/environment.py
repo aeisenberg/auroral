@@ -40,8 +40,9 @@ class Vector():
 
     def normalize(self):
         n = self.norm()
-        self.x = self.x / n
-        self.y = self.y / n
+        if n:
+            self.x = self.x / n
+            self.y = self.y / n
 
     def __add__(self, other):
         return Vector(self.x + other.x, self.y + other.y)
@@ -81,6 +82,13 @@ class Agent:
         if self.direction.norm() > 0.1:
             self.front = self.direction.copy()
             self.front.normalize()
+
+    def get_rotation(self):
+        d = self.front.x if self.front.x != 0.0 else 0.01
+        r = -1.0 * atan(self.front.y / d)
+        if self.front.x < 0.0:
+            r += pi
+        return r * 180.0 / pi - 90.0
 
 
 class PlayerAgent(Agent):
@@ -135,7 +143,7 @@ class Environment:
             objects: list,
             agents: list
             ):
-        self.tilemap = np.array(tilemap)
+        self.tilemap = tilemap
         self.objects = np.array(objects)
         self.projectiles = []
         self.agents = []
