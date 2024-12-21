@@ -234,24 +234,28 @@ def render_isometric(env: environment.Environment,
             for name, agent in env.agents:
                 p = agent.position.y + agent.position.x - 0.75
                 if p <= diagonal and p + 1 > diagonal:
-                    ix = resources["matches"]["agents"][name][1]
-                    iy = resources["matches"]["agents"][name][0]
+                    ix = get_agent_orientation(agent.get_rotation(), AGENT_N) + 1
+                    iy = resources["matches"]["agents"][name][1]
+                    if agent.direction.norm():
+                        iy += int(period * 10 % 2)
+                    else:
+                        iy += 1
                     x = (-agent.position.y + agent.position.x + 0.5) * N / 2
                     y = (agent.position.x + agent.position.y + 0.5) * M / 2
                     screen.blit(
                         resources["images"]["agents"],
                         (x + x_o, y + y_o),
-                        (get_agent_orientation(agent.get_rotation(), AGENT_N) + 1, iy + 1, AGENT_N, AGENT_N)
+                        (ix, iy * AGENT_N + iy + 1, AGENT_N, AGENT_N)
                     )
             # Projectiles
             for projectile in env.projectiles:
-                p = projectile.position.y + projectile.position.x - 1
+                p = projectile.position.y + projectile.position.x - 0.75
                 if p <= diagonal and p + 1 > diagonal:
                     ix = resources["matches"]["projectiles"][projectile.name][1]
                     iy = resources["matches"]["projectiles"][projectile.name][0]
                     s = pygame.Surface((N, N), pygame.SRCALPHA)
-                    x = (-projectile.position.y + projectile.position.x + D) * N / 2
-                    y = (projectile.position.x + projectile.position.y + D + 1) * M / 2
+                    x = (-projectile.position.y + projectile.position.x) * N / 2
+                    y = (projectile.position.x + projectile.position.y + 0.5) * M / 2
                     P = 2
                     s.blit(
                         resources["images"]["projectiles"],
@@ -259,8 +263,8 @@ def render_isometric(env: environment.Environment,
                         (ix + (ix * AGENT_N) + (P / 2), iy + (iy * AGENT_N) + (P / 2), AGENT_N - P, AGENT_N - P)
                     )
                     screen.blit(
-                        pygame.transform.rotate(s, projectile.get_rotation() + 45),
-                        (x + x_o, y + y_o, 16, 16),
+                        pygame.transform.rotate(s, projectile.get_rotation() - 45),
+                        (x + x_o, y + y_o),
                     )
             # Indices
             row -= 1
@@ -285,12 +289,12 @@ def render_debug(
         fps = "N/A"
     else:
         fps = f"{(1.0 / delta):.6}"
-    text_surface = font.render("FPS: " + fps, False, (0, 0, 0))
+    text_surface = font.render("FPS: " + fps, False, (255, 255, 255))
     screen.blit(text_surface, (6, 48))
     avg_delta = sum(delta_buffer) / len(delta_buffer)
     if avg_delta == 0.0:
         fps = "N/A"
     else:
         fps = f"{(1.0 / avg_delta):.6}"
-    text_surface = font.render("Avg. FPS: " + fps, False, (0, 0, 0))
+    text_surface = font.render("Avg. FPS: " + fps, False, (255, 255, 255))
     screen.blit(text_surface, (6, 70))

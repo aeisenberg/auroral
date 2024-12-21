@@ -150,7 +150,7 @@ class Environment:
             agents: list
             ):
         self.tilemap = tilemap
-        self.objects = np.array(objects)
+        self.objects = objects
         self.projectiles = []
         self.agents = []
         for k, v in agents.items():
@@ -169,7 +169,7 @@ class Environment:
         for i in range(len(self.tilemap)):
             for j in range(len(self.tilemap[0])):
                 # Normal tiles
-                if self.tilemap[i][j] in ('0', '1'):
+                if self.tilemap[i][j] in (' ', '0', '1'):
                     self.collisions[i][j] = 0
                 elif self.tilemap[i][j] == 2:
                     self.collisions[i][j] = 1
