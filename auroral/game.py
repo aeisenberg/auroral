@@ -32,10 +32,9 @@ if DEBUG:
     font = pygame.font.SysFont('Comic Sans MS', 24)
     delta_buffer = deque(maxlen=500)
 
-ENVIRONMENT_FILE = "../assets/levels/test.json"
+ENVIRONMENT_FILE = "../assets/levels/isometric_test.json"
 MATCHES_FILE = "../assets/matches.json"
-TILE_SIZE = 32
-SCREEN_DIMENSIONS = (TILE_SIZE * 16, TILE_SIZE * 16)
+SCREEN_DIMENSIONS = (512, 512)
 
 
 tilemap, objects, agents, theme = environment.load(ENVIRONMENT_FILE)
@@ -77,26 +76,26 @@ while True:
                 direction.y -= 1.0
         player.direction = direction.copy()
         player.direction.normalize()
+        player.direction.rotate(-45)
     now = time.time()
     delta = now - ti
     ti = now
     env.update(delta)
     position = env.get_player().position
-    renderer.render(
+    screen.fill((50, 50, 50))
+    renderer.render_isometric(
         env,
         screen,
         resources,
         SCREEN_DIMENSIONS,
         (position.x, position.y),
-        TILE_SIZE,
         delta
     )
+    renderer.render_agent_state(env, screen)
     if DEBUG:
         delta_buffer.append(delta)
         renderer.render_debug(
-            env,
             screen,
-            SCREEN_DIMENSIONS,
             delta,
             delta_buffer,
             font

@@ -24,9 +24,11 @@ def load_resources(directory: str, config_file: str, theme: str):
         "tilemap": pygame.image.load(theme_directory + 'tilemap.png'),
         "objects": pygame.image.load(theme_directory + 'objects.png'),
         "agents": pygame.image.load(directory + 'agents.png'),
-        "water": pygame.image.load(directory + 'water.png'),
+        "water": pygame.image.load(theme_directory + 'water.png'),
         "projectiles": pygame.image.load(directory + 'projectiles.png'),
     }
+    with open(theme_directory + "parameters.json") as f:
+        parameters = json.load(f)
     with open(config_file) as f:
         content = json.load(f)
     matches = {
@@ -36,7 +38,7 @@ def load_resources(directory: str, config_file: str, theme: str):
         "agents": content["agent_image"],
         "projectiles": content["projectile_image"],
     }
-    return {"images": images, "matches": matches}
+    return {"images": images, "matches": matches, "parameters": parameters}
 
 
 def get_agent_orientation(angle: float, N: float) -> tuple:
@@ -66,12 +68,11 @@ def render(
         resources,
         dimension,
         camera: list = [0, 0],
-        N: int = 32,
         delta: float = 0.0
     ):
     global period
     period += delta
-
+    N = resources["parameters"]["tile_dimension"]
     X_MAX = len(env.tilemap[0])
     Y_MAX = len(env.tilemap)
     col_min = int(camera[0]) - int(dimension[1] / 2)
@@ -124,9 +125,8 @@ def render(
         screen.blit(
             resources["images"]["agents"],
             (agent.position.x * N - o + x_o, agent.position.y * N - o + y_o),
-            (get_agent_orientation(agent.get_rotation(), N) + 1, iy + 1, N, N)
+            (get_agent_orientation(agent.get_rotation(), 32) + 1, iy + 1, 32, 32)
         )
-        get_agent_orientation(agent.get_rotation(), N)
     # Projectiles
     for p in env.projectiles:
         ix = resources["matches"]["projectiles"][p.name][1]
@@ -142,7 +142,133 @@ def render(
             pygame.transform.rotate(s, p.get_rotation()),
             (p.position.x * N + x_o, p.position.y * N + y_o),
         )
-    # Game information.
+
+
+def render_isometric(env: environment.Environment,
+        screen,
+        resources,
+        dimension,
+        camera: list = [0, 0],
+        delta: float = 0.0
+    ):
+    w, z = len(env.tilemap), len(env.tilemap[0])
+    assert w == z, f"Non-square isometric map. Dimensions: {w} x {z}."
+    global period
+    period += delta
+    N = resources["parameters"]["tile_dimension"]
+    M = resources["parameters"]["isometric_offset"]
+    AGENT_N = 32
+    X_MAX = len(env.tilemap)
+    x_o = (camera[1] * N - camera[0] * N + dimension[0]) / 2
+    x_o = clamp(x_o, 0.0, X_MAX * N / 2)
+    y_o = (-1 * camera[1] * M - camera[0] * M + dimension[0]) / 2
+    y_o = clamp(y_o, -1 * X_MAX * M / 4, 0.0)
+    D = len(env.tilemap)
+    # Display the floor
+    for diagonal in range(D * 2 + 1):
+        row = diagonal
+        col = 0
+        while True:
+            if row >= D:
+                row -= 1
+                col += 1
+                continue
+            if row < 0 or col >= D:
+                break
+            x = (col - row) / 2 * N
+            y = diagonal * M / 2
+            # Tilemap
+            v = str(env.tilemap[row][col])
+            if v == resources["matches"]["tiles"]["water"]:
+                iy = 0
+                ix = int(period * 6 % 5)
+                image = resources["images"]["water"]
+            else:
+                ix = resources["matches"]["tilemap"][v][1]
+                iy = resources["matches"]["tilemap"][v][0]
+                image = resources["images"]["tilemap"]
+            screen.blit(
+                image,
+                (x + x_o, y + y_o),
+                (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+            )
+            # Items
+            v = str(env.objects[row][col])
+            if v in resources["matches"]["objects"]:
+                ix = resources["matches"]["objects"][v][1]
+                iy = resources["matches"]["objects"][v][0]
+                x = (col - row) / 2 * N
+                y = diagonal * M / 2
+                screen.blit(
+                    resources["images"]["objects"],
+                    (x + x_o, y + y_o),
+                    (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+                )
+            # Indices
+            row -= 1
+            col += 1
+    # Display walls and objects
+    for diagonal in range(D * 2 + 1):
+        row = diagonal
+        col = 0
+        while True:
+            if row >= D:
+                row -= 1
+                col += 1
+                continue
+            if row < 0 or col >= D:
+                break
+            x = (col - row) / 2 * N
+            y = diagonal * M / 2
+            # Tilemap
+            if env.collisions[row][col] >= 2:
+                v = str(env.tilemap[row][col])
+                ix = resources["matches"]["tilemap"][v][1]
+                iy = resources["matches"]["tilemap"][v][0]
+                screen.blit(
+                    resources["images"]["tilemap"],
+                    (x + x_o, y + y_o),
+                    (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+                )
+            # Agents
+            for name, agent in env.agents:
+                p = agent.position.y + agent.position.x - 0.75
+                if p <= diagonal and p + 1 > diagonal:
+                    ix = resources["matches"]["agents"][name][1]
+                    iy = resources["matches"]["agents"][name][0]
+                    x = (-agent.position.y + agent.position.x + 0.5) * N / 2
+                    y = (agent.position.x + agent.position.y + 0.5) * M / 2
+                    screen.blit(
+                        resources["images"]["agents"],
+                        (x + x_o, y + y_o),
+                        (get_agent_orientation(agent.get_rotation(), AGENT_N) + 1, iy + 1, AGENT_N, AGENT_N)
+                    )
+            # Projectiles
+            for projectile in env.projectiles:
+                p = projectile.position.y + projectile.position.x - 1
+                if p <= diagonal and p + 1 > diagonal:
+                    ix = resources["matches"]["projectiles"][projectile.name][1]
+                    iy = resources["matches"]["projectiles"][projectile.name][0]
+                    s = pygame.Surface((N, N), pygame.SRCALPHA)
+                    x = (-projectile.position.y + projectile.position.x + D) * N / 2
+                    y = (projectile.position.x + projectile.position.y + D + 1) * M / 2
+                    P = 2
+                    s.blit(
+                        resources["images"]["projectiles"],
+                        (0, 0),
+                        (ix + (ix * AGENT_N) + (P / 2), iy + (iy * AGENT_N) + (P / 2), AGENT_N - P, AGENT_N - P)
+                    )
+                    screen.blit(
+                        pygame.transform.rotate(s, projectile.get_rotation() + 45),
+                        (x + x_o, y + y_o, 16, 16),
+                    )
+            # Indices
+            row -= 1
+            col += 1
+
+
+
+def render_agent_state(env, screen):
     pygame.draw.rect(screen, BLACK, (6, 6, 128, 16))
     pygame.draw.rect(screen, BLUE, (8, 8, env.get_player().magic * 124, 12))
     pygame.draw.rect(screen, BLACK, (6, 24, 128, 16))
@@ -150,9 +276,7 @@ def render(
 
 
 def render_debug(
-        env: environment.Environment,
         screen,
-        dimension,
         delta,
         delta_buffer,
         font

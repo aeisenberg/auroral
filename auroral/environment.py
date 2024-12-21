@@ -9,7 +9,7 @@ File information:
 
 import json
 import numpy as np
-from math import atan, pi
+from math import atan, pi, sin, cos
 
 
 def load(level_filename: str) -> tuple:
@@ -56,6 +56,12 @@ class Vector():
     def __repr__(self):
         return f"<{self.x}, {self.y}>"
 
+    def rotate(self, r):
+        r = r * pi / 180
+        x, y = self.x, self.y
+        self.x = cos(r) * x - sin(r) * y
+        self.y = sin(r) * x + cos(r) * y
+
 
 class Agent:
     def __init__(self, properties):
@@ -95,7 +101,7 @@ class PlayerAgent(Agent):
     def __init__(self, properties):
         Agent.__init__(self, properties)
         self.MAGIC_SPEED = 0.05
-        self.speed = 4.0
+        self.speed = 6.0
 
     def fire(self):
         if self.magic > 0.0:
@@ -165,8 +171,10 @@ class Environment:
                 # Normal tiles
                 if self.tilemap[i][j] in ('0', '1'):
                     self.collisions[i][j] = 0
-                else:
+                elif self.tilemap[i][j] == 2:
                     self.collisions[i][j] = 1
+                else:
+                    self.collisions[i][j] = 2
                 # Bridges
                 if self.tilemap[i][j] == "2":
                     if self.objects[i][j] in ("1", "2"):

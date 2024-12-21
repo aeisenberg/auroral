@@ -2,20 +2,22 @@
     "tilemap_image": {
         "0": [0, 0],
         "1": [0, 1],
-        "2": [0, 2]
+        "2": [0, 2],
+        "3": [0, 3]
     },
     "tile_equivalences": {
-        "grass": "0",
-        "ground": "1",
-        "water": "2"
-    },
-    "object_image": {
-        "1": [1, 0],
-        "2": [1, 1]
+        "flat_0": "0",
+        "flat_1": "1",
+        "water": "2",
+        "wall_0": "3"
     },
     "object_equivalences": {
         "bridge_horizontal": "1",
         "bridge_vertical": "2"
+    },
+    "object_image": {
+        "1": [1, 0],
+        "2": [1, 1]
     },
     "agent_image": {
         "player": [0, 0]
