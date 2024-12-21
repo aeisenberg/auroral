@@ -26,6 +26,7 @@ def load_resources(directory: str, config_file: str, theme: str):
         "agents": pygame.image.load(directory + 'agents.png'),
         "water": pygame.image.load(theme_directory + 'water.png'),
         "projectiles": pygame.image.load(directory + 'projectiles.png'),
+        "animations": pygame.image.load(directory + 'animations.png'),
     }
     with open(theme_directory + "parameters.json") as f:
         parameters = json.load(f)
@@ -37,6 +38,7 @@ def load_resources(directory: str, config_file: str, theme: str):
         "objects": content["object_image"],
         "agents": content["agent_image"],
         "projectiles": content["projectile_image"],
+        "animations": content["animations"]
     }
     return {"images": images, "matches": matches, "parameters": parameters}
 
@@ -253,6 +255,7 @@ def render_isometric(env: environment.Environment,
                 if p <= diagonal and p + 1 > diagonal:
                     ix = resources["matches"]["projectiles"][projectile.name][1]
                     iy = resources["matches"]["projectiles"][projectile.name][0]
+                    iy += int(period * 10 % 2)
                     s = pygame.Surface((N, N), pygame.SRCALPHA)
                     x = (-projectile.position.y + projectile.position.x) * N / 2
                     y = (projectile.position.x + projectile.position.y + 0.5) * M / 2
@@ -265,6 +268,21 @@ def render_isometric(env: environment.Environment,
                     screen.blit(
                         pygame.transform.rotate(s, projectile.get_rotation() - 45),
                         (x + x_o, y + y_o),
+                    )
+            # Animations
+            for a in env.animations:
+                p = a.position.y + a.position.x - 0.75
+                if p <= diagonal and p + 1 > diagonal:
+                    ix = resources["matches"]["animations"][a.name][1]
+                    iy = resources["matches"]["animations"][a.name][0]
+                    iy += int(a.lifetime / a.total_lifetime * 7)
+                    s = pygame.Surface((N, N), pygame.SRCALPHA)
+                    x = (-a.position.y + a.position.x) * N / 2
+                    y = (a.position.x + a.position.y + 0.5) * M / 2
+                    screen.blit(
+                        resources["images"]["animations"],
+                        (x + x_o, y + y_o),
+                        (ix + 1, iy * AGENT_N + iy + 1, AGENT_N, AGENT_N)
                     )
             # Indices
             row -= 1

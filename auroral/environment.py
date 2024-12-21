@@ -24,7 +24,7 @@ def load(level_filename: str) -> tuple:
     with open(level_filename) as f:
         content = json.load(f)
     tilemap = content["tilemap"]
-    objects = content["objects"]
+    objects = [list(line) for line in content["objects"]]
     agents = content["agents"]
     theme = content["theme"]
     return tilemap, objects, agents, theme
@@ -46,6 +46,9 @@ class Vector():
 
     def __add__(self, other):
         return Vector(self.x + other.x, self.y + other.y)
+
+    def __sub__(self, other):
+        return Vector(self.x - other.x, self.y - other.y)
 
     def __mul__(self, n):
         return Vector(self.x * n, self.y * n)
@@ -102,16 +105,12 @@ class PlayerAgent(Agent):
         Agent.__init__(self, properties)
         self.MAGIC_SPEED = 0.05
         self.speed = 6.0
+        self.score = 0.0
 
     def fire(self):
         if self.magic > 0.0:
             self.action = {"action": "fire", "direction": self.direction}
             self.magic -= 0.2
-
-    def freeze(self):
-        if self.magic > 0.0:
-            self.action = {"action": "freeze", "direction": self.direction}
-            self.magic -= 0.5
 
 
 class Projectile:
@@ -119,11 +118,12 @@ class Projectile:
         self.name = name
         self.position = position
         self.direction = direction
+        self.position -= (self.direction * 0.25)
         self.speed = 1.0
         self.exploded = False
         self.lifetime = 3.0
         if self.name == "fire":
-            self.speed = 15.0
+            self.speed = 20.0
 
     def update(self, delta):
         self.position += self.direction * self.speed * delta
@@ -142,6 +142,14 @@ class Projectile:
         self.exploded = True
 
 
+class Animation:
+    def __init__(self, name, position):
+        self.name = name
+        self.position = position
+        self.total_lifetime = 0.5
+        self.lifetime = 0.0
+
+
 class Environment:
     def __init__(
             self,
@@ -153,6 +161,7 @@ class Environment:
         self.objects = objects
         self.projectiles = []
         self.agents = []
+        self.animations = []
         for k, v in agents.items():
             if k == "player":
                 self.agents.append((k, PlayerAgent(v)))
@@ -186,6 +195,33 @@ class Environment:
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
+        self.update_animations(delta)
+        self.update_objects(delta)
+
+    def update_objects(self, delta: float):
+        x, y = int(self.player.position.x + 0.5), int(self.player.position.y + 0.5)
+        if x < 0:
+            x = 0
+        if y < -1:
+            y = 0
+        if x >= len(self.objects[0]):
+            x = len(self.objects[0]) - 1
+        if y >= len(self.objects):
+            y = len(self.objects) - 1
+        if self.objects[y][x] == "*":
+            self.player.score += 1.0
+            self.objects[y][x] = " "
+        elif self.objects[y][x] == "k":
+            print("KEY")
+            self.objects[y][x] = " "
+
+    def update_animations(self, delta: float):
+        retained = []
+        for i in range(len(self.animations)):
+            self.animations[i].lifetime += delta
+            if self.animations[i].lifetime < self.animations[i].total_lifetime:
+                retained.append(self.animations[i])
+        self.animations = retained
 
     def push_out(self, agent):
         x, y = int(agent.position.x), int(agent.position.y)
@@ -201,10 +237,10 @@ class Environment:
             for j in (-1, 0, 1):
                 if y + i >= len(self.collisions) or x + j >= len(self.collisions[0]):
                     continue
-                # There is can obstacle.
+                # Do not test collisions if there is no obstacle.
                 if self.collisions[y + i][x + j] == 0:
                     continue
-                # There is a collision.
+                # Do not push out if there is not overlap.
                 if (agent.position.x + agent.s < x + j
                         or agent.position.x > x + j + 1
                         or agent.position.y + agent.s < y + i
@@ -235,16 +271,26 @@ class Environment:
     def move_projectiles(self, delta):
         for p in self.projectiles:
             p.update(delta)
+            # Tilemap
+            row, col = int(p.position.y), int(p.position.x)
+            if row >= 0 and row < len(self.collisions) and col >= 0 and col < len(self.collisions[0]):
+                if self.collisions[row][col] >= 2:
+                    p.explode()
+            # Agents
             for name, agent in self.agents:
                 if (
-                    agent.position.x - p.position.y < 0.5
-                    and agent.position.x - p.position.y < 0.5
+                    abs(agent.position.x - p.position.x) < 0.5
+                    and abs(agent.position.y - p.position.y) < 0.5
                 ):
-                    pass#p.explode()
+                    p.explode()
         retained = []
         for i in range(len(self.projectiles)):
             if not self.projectiles[i].exploded:
                 retained.append(self.projectiles[i])
+            else:
+                p = self.projectiles[i].position
+                self.animations.append(Animation("flame", p))
+                self.burn(p)
         self.projectiles = retained
 
     def update_agents(self, delta):
@@ -254,7 +300,12 @@ class Environment:
                 start = agent.position + agent.front
                 if agent.action["action"] == "fire":
                     self.projectiles.append(Projectile("fire", start, agent.front.copy()))
-                elif agent.action["action"] == "freeze":
-                    pass
                 agent.action = None
 
+    def burn(self, position):
+        for _, agent in self.agents:
+            if (
+                abs(agent.position.x - position.x) < 1
+                and abs(agent.position.y - position.y) < 1
+            ):
+                agent.health_points -= 0.2
