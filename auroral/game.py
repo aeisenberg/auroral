@@ -80,7 +80,8 @@ while True:
     now = time.time()
     delta = now - ti
     ti = now
-    env.update(delta)
+    if env.update(delta):
+        break
     position = env.get_player().position
     screen.fill((50, 50, 50))
     renderer.render_isometric(

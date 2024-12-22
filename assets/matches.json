@@ -1,25 +1,31 @@
 {
     "tilemap_image": {
-        "0": [0, 0],
+        " ": [0, 0],
         "1": [0, 1],
         "2": [0, 2],
         "3": [0, 3]
     },
     "tile_equivalences": {
-        "flat_0": "0",
+        "flat_0": " ",
         "flat_1": "1",
         "water": "2",
         "wall_0": "3"
-    },
-    "object_equivalences": {
-        "bridge_horizontal": "1",
-        "bridge_vertical": "2"
     },
     "object_image": {
         "1": [1, 0],
         "2": [1, 1],
         "*": [0, 0],
-        "k": [0, 1]
+        "k": [0, 1],
+        "t": [0, 2],
+        "d": [0, 3]
+    },
+    "object_heights": {
+        "1": 0,
+        "2": 0,
+        "*": 0,
+        "k": 1,
+        "t": 1,
+        "d": 1
     },
     "agent_image": {
         "player": [0, 3]

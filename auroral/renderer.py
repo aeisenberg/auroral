@@ -38,7 +38,8 @@ def load_resources(directory: str, config_file: str, theme: str):
         "objects": content["object_image"],
         "agents": content["agent_image"],
         "projectiles": content["projectile_image"],
-        "animations": content["animations"]
+        "animations": content["animations"],
+        "object_heights": content["object_heights"],
     }
     return {"images": images, "matches": matches, "parameters": parameters}
 
@@ -197,15 +198,16 @@ def render_isometric(env: environment.Environment,
             # Items
             v = str(env.objects[row][col])
             if v in resources["matches"]["objects"]:
-                ix = resources["matches"]["objects"][v][1]
-                iy = resources["matches"]["objects"][v][0]
-                x = (col - row) / 2 * N
-                y = diagonal * M / 2
-                screen.blit(
-                    resources["images"]["objects"],
-                    (x + x_o, y + y_o),
-                    (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
-                )
+                if resources["matches"]["object_heights"][v] == 0:
+                    ix = resources["matches"]["objects"][v][1]
+                    iy = resources["matches"]["objects"][v][0]
+                    x = (col - row) / 2 * N
+                    y = diagonal * M / 2
+                    screen.blit(
+                        resources["images"]["objects"],
+                        (x + x_o, y + y_o),
+                        (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+                    )
             # Indices
             row -= 1
             col += 1
@@ -248,6 +250,19 @@ def render_isometric(env: environment.Environment,
                         resources["images"]["agents"],
                         (x + x_o, y + y_o),
                         (ix, iy * AGENT_N + iy + 1, AGENT_N, AGENT_N)
+                    )
+            # Items
+            v = str(env.objects[row][col])
+            if v in resources["matches"]["objects"]:
+                if resources["matches"]["object_heights"][v] == 1:
+                    ix = resources["matches"]["objects"][v][1]
+                    iy = resources["matches"]["objects"][v][0]
+                    x = (col - row) / 2 * N
+                    y = diagonal * M / 2
+                    screen.blit(
+                        resources["images"]["objects"],
+                        (x + x_o, y + y_o),
+                        (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
                     )
             # Projectiles
             for projectile in env.projectiles:

@@ -106,6 +106,7 @@ class PlayerAgent(Agent):
         self.MAGIC_SPEED = 0.05
         self.speed = 6.0
         self.score = 0.0
+        self.n_keys = 0
 
     def fire(self):
         if self.magic > 0.0:
@@ -168,6 +169,7 @@ class Environment:
                 self.player = self.agents[-1][1]
             else:
                 self.agents.append((k, Agent(v)))
+        self.n_points = sum([len(list(c for c in l if c == "*")) for l in self.objects])
         self.collisions = np.zeros((len(self.tilemap), len(self.tilemap[0])))
         self.refresh_collisions()
 
@@ -179,7 +181,10 @@ class Environment:
             for j in range(len(self.tilemap[0])):
                 # Normal tiles
                 if self.tilemap[i][j] in (' ', '0', '1'):
-                    self.collisions[i][j] = 0
+                    if self.objects[i][j] in ("t", "d"):
+                        self.collisions[i][j] = 1
+                    else:
+                        self.collisions[i][j] = 0
                 elif self.tilemap[i][j] == 2:
                     self.collisions[i][j] = 1
                 else:
@@ -191,14 +196,34 @@ class Environment:
                     else:
                         self.collisions[i][j] = 1
 
-    def update(self, delta: float):
+    def update(self, delta: float) -> bool:
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
         self.update_animations(delta)
+        self.collect_objects(delta)
         self.update_objects(delta)
+        return self.is_end_state()
+
+    def is_end_state(self):
+        if self.player.health_points <= 0.0:
+            return True
+        if self.n_points == 0:
+            return True
+        return False
 
     def update_objects(self, delta: float):
+        x, y = int(self.player.position.x + 0.5), int(self.player.position.y + 0.5)
+        for i in range(len(self.objects)):
+            for j in range(len(self.objects[0])):
+                if self.objects[i][j] == "d" and self.get_player().n_keys:
+                    distance = Vector(x - j, y - i).norm()
+                    if distance < 1.02:
+                        self.get_player().n_keys -= 1
+                        self.objects[i][j] = " "
+                        self.collisions[i][j] = 0
+
+    def collect_objects(self, delta: float):
         x, y = int(self.player.position.x + 0.5), int(self.player.position.y + 0.5)
         if x < 0:
             x = 0
@@ -210,9 +235,10 @@ class Environment:
             y = len(self.objects) - 1
         if self.objects[y][x] == "*":
             self.player.score += 1.0
+            self.n_points -= 1
             self.objects[y][x] = " "
         elif self.objects[y][x] == "k":
-            print("KEY")
+            self.get_player().n_keys += 1
             self.objects[y][x] = " "
 
     def update_animations(self, delta: float):
@@ -276,6 +302,10 @@ class Environment:
             if row >= 0 and row < len(self.collisions) and col >= 0 and col < len(self.collisions[0]):
                 if self.collisions[row][col] >= 2:
                     p.explode()
+                if self.objects[row][col] == "t":
+                    p.explode()
+                    self.objects[row][col] = " "
+                    self.collisions[row][col] = 0
             # Agents
             for name, agent in self.agents:
                 if (
