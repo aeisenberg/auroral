@@ -1,5 +1,5 @@
 """
-This module renders the environment.
+Render the environment on a surface.
 
 File information:
     - Author: Vincent Therrien (therrien.vincent.2@courrier.uqam.ca)
@@ -10,7 +10,7 @@ File information:
 import json
 import pygame
 
-import environment
+from auroral import environment
 
 WHITE = (255, 255, 255)
 BLUE = (0, 0, 255)
@@ -19,7 +19,7 @@ BLACK = (0, 0, 0)
 
 
 def load_resources(directory: str, config_file: str, theme: str):
-    theme_directory = directory + "/themes/" + theme + "/"
+    theme_directory = directory + "themes/" + theme + "/"
     images = {
         "tilemap": pygame.image.load(theme_directory + 'tilemap.png'),
         "objects": pygame.image.load(theme_directory + 'objects.png'),

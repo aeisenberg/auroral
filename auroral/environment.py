@@ -23,11 +23,8 @@ def load(level_filename: str) -> tuple:
     """
     with open(level_filename) as f:
         content = json.load(f)
-    tilemap = content["tilemap"]
-    objects = [list(line) for line in content["objects"]]
-    agents = content["agents"]
-    theme = content["theme"]
-    return tilemap, objects, agents, theme
+    tilemap = [list(line) for line in content["tilemap"]]
+    return tilemap
 
 
 class Vector():
@@ -67,11 +64,8 @@ class Vector():
 
 
 class Agent:
-    def __init__(self, properties):
-        self.position = Vector(
-            properties["position"][0],
-            properties["position"][1]
-        )
+    def __init__(self, position):
+        self.position = Vector(position[0], position[1])
         self.direction = Vector(0.0, 0.0)
         self.front = Vector(0.0, 1.0)  # Faces South by default.
         self.speed = 3.0
@@ -151,25 +145,27 @@ class Animation:
         self.lifetime = 0.0
 
 
+TILE_CHARACTERS = (" ", "1", "2", "3")
+OBJECT_CHARACTERS = ("v", "h", "*", "k", "t", "d")
+
+
 class Environment:
     def __init__(
             self,
             tilemap: list[list[int]],
-            objects: list,
-            agents: list
             ):
-        self.tilemap = tilemap
-        self.objects = objects
+        self.tilemap = [list(c if c in TILE_CHARACTERS else " " for c in l) for l in tilemap]
+        self.objects = [list(c if c in OBJECT_CHARACTERS else " " for c in l) for l in tilemap]
         self.projectiles = []
         self.agents = []
         self.animations = []
-        for k, v in agents.items():
-            if k == "player":
-                self.agents.append((k, PlayerAgent(v)))
-                self.player = self.agents[-1][1]
-            else:
-                self.agents.append((k, Agent(v)))
-        self.n_points = sum([len(list(c for c in l if c == "*")) for l in self.objects])
+        for i in range(len(tilemap)):
+            for j in range(len(tilemap[0])):
+                if tilemap[i][j] == "p":
+                    self.agents.append(("player", PlayerAgent((j, i))))
+                    self.player = self.agents[-1][1]
+                    self.tilemap[i][j] = " "
+        self.n_points = sum([len(list(c for c in l if c == "*")) for l in tilemap])
         self.collisions = np.zeros((len(self.tilemap), len(self.tilemap[0])))
         self.refresh_collisions()
 
