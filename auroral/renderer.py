@@ -227,13 +227,14 @@ def render_isometric(env: environment.Environment,
             # Tilemap
             if env.collisions[row][col] >= 2:
                 v = str(env.tilemap[row][col])
-                ix = resources["matches"]["tilemap"][v][1]
-                iy = resources["matches"]["tilemap"][v][0]
-                screen.blit(
-                    resources["images"]["tilemap"],
-                    (x + x_o, y + y_o),
-                    (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
-                )
+                if v in resources["matches"]["tilemap"]:
+                    ix = resources["matches"]["tilemap"][v][1]
+                    iy = resources["matches"]["tilemap"][v][0]
+                    screen.blit(
+                        resources["images"]["tilemap"],
+                        (x + x_o, y + y_o),
+                        (ix + (ix * N) + 1, iy + (iy * N) + 1, N, N)
+                    )
             # Agents
             for name, agent in env.agents:
                 p = agent.position.y + agent.position.x - 0.75

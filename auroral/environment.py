@@ -145,7 +145,7 @@ class Animation:
         self.lifetime = 0.0
 
 
-TILE_CHARACTERS = (" ", "1", "2", "3")
+TILE_CHARACTERS = (" ", "1", "2", "3", "w")
 OBJECT_CHARACTERS = ("v", "h", "*", "k", "t", "d")
 
 
@@ -186,11 +186,9 @@ class Environment:
                 else:
                     self.collisions[i][j] = 2
                 # Bridges
-                if self.tilemap[i][j] == "2":
-                    if self.objects[i][j] in ("1", "2"):
-                        self.collisions[i][j] = 0
-                    else:
-                        self.collisions[i][j] = 1
+                if self.objects[i][j] in ("v", "h"):
+                    self.collisions[i][j] = 0
+                    self.tilemap[i][j] = "w"
 
     def update(self, delta: float) -> bool:
         self.displace_agents(delta)

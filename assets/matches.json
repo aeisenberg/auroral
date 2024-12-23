@@ -2,13 +2,12 @@
     "tilemap_image": {
         " ": [0, 0],
         "1": [0, 1],
-        "2": [0, 2],
         "3": [0, 3]
     },
     "tile_equivalences": {
         "flat_0": " ",
         "flat_1": "1",
-        "water": "2",
+        "water": "w",
         "wall_0": "3"
     },
     "object_image": {
