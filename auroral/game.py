@@ -24,6 +24,16 @@ def play(
         theme: str,
         debug: bool
     ) -> tuple[int]:
+    """Play the game in interactive mode.
+
+    This function is intended to be used as a game loop for a human player.
+
+    Args:
+        screen: The Pygame surface ono which to render the game.
+        level_file: File path used to load the level. `None` if random.
+        theme: The graphic theme to use.
+        debug: If `True`, display debugging information on the screen.
+    """
     dimensions = (screen.get_width(), screen.get_height())
     try:
         tilemap = environment.load(level_file)
@@ -72,7 +82,8 @@ def play(
         delta = now - ti
         ti = now
         # Update the game.
-        if env.update(delta):
+        _, is_over = env.update(delta)
+        if is_over:
             return env.get_score()
         # Render on the surface.
         screen.fill((50, 50, 50))
@@ -95,3 +106,60 @@ def play(
                 font
             )
         pygame.display.update()
+
+
+def frame(
+        env: environment.Environment,
+        screen: pygame.Surface,
+        resources: dict,
+        delta: float,
+        action: dict
+    ) -> tuple:
+    """Process one frame of the game logic and display on screen.
+
+    This function is intended to be used in non-interactive mode to train
+    machine learning models.
+
+    Args:
+        env: Game environment.
+        screen: pygame surface onto which to render the game (observation).
+        resources: Game assets used to render the environment.
+        delta: Number of seconds between two frames.
+        action: Dictionary of inputs. The keys are `up`, `down`, `left`,
+            `right`, and `fire`. The values are Booleans.
+
+    Returns: A tuple organized as (reward: float, is_terminal_state: bool),
+        where `reward` indicates the reward collected by the agent at the end
+        of the frame (after completing its action) and `is_terminal_state` is
+        `True` is the game is completed and `False` if not.
+    """
+    # Perform the action.
+    player = env.get_player()
+    direction = Vector(0.0, 0.0)
+    if action["up"]:
+        direction.y -= 1.0
+    if action["down"]:
+        direction.y += 1.0
+    if action["left"]:
+        direction.y -= 1.0
+    if action["right"]:
+        direction.y += 1.0
+    if action["fire"]:
+        player.fire()
+    player.direction = direction.copy()
+    player.direction.normalize()
+    player.direction.rotate(-45)
+    reward, is_terminal = env.update(delta)
+    # Render on screen.
+    dimensions = (screen.get_width(), screen.get_height())
+    screen.fill((50, 50, 50))
+    position = env.get_player().position
+    render.isometric(
+        env,
+        screen,
+        resources,
+        dimensions,
+        (position.x, position.y),
+        delta
+    )
+    return reward, is_terminal

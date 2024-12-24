@@ -285,13 +285,18 @@ class Environment:
                     self.tilemap[i][j] = "w"
 
     def update(self, delta: float) -> bool:
+        original_hp = self.player.health_points
+        original_score = self.player.score
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
         self.update_animations(delta)
         self.collect_objects(delta)
         self.update_objects(delta)
-        return self.is_end_state()
+        final_hp = self.player.health_points
+        final_score = self.player.score
+        reward = (final_score - original_score) + (final_hp - original_hp)
+        return reward, self.is_end_state()
 
     def get_score(self) -> tuple[int]:
         if self.player.health_points < 0:

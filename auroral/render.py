@@ -162,11 +162,8 @@ def isometric(
     N = resources["parameters"]["tile_dimension"]
     M = resources["parameters"]["isometric_offset"]
     AGENT_N = 32
-    X_MAX = len(env.tilemap)
     x_o = (camera[1] * N - camera[0] * N + dimension[0]) / 2
-    x_o = clamp(x_o, 0.0, X_MAX * N * 2 ** 0.5 / 2)
     y_o = (-1 * camera[1] * M - camera[0] * M + dimension[0]) / 2
-    y_o = clamp(y_o, -1 * X_MAX * M * 2 ** 0.5 / 4, 0.0)
     D = len(env.tilemap)
     # Display the floor
     for diagonal in range(D * 2 + 1):
