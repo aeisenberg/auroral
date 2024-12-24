@@ -54,7 +54,7 @@ def generate_level(n: int) -> tuple:
     add_element("3", 5, 8)
     add_element("w", 0, 6)
     add_element("t", 0, 20)
-    if uniform(0.0, 1.0) < 0.5:
+    if uniform(0.0, 1.0) < 0.99:
         add_element("d", 1, 1)
         add_element("k", 1, 1)
     if uniform(0.0, 1.0) < 0.3:
@@ -135,7 +135,7 @@ class Agent:
 class PlayerAgent(Agent):
     def __init__(self, properties):
         Agent.__init__(self, properties)
-        self.MAGIC_SPEED = 0.05
+        self.MAGIC_SPEED = 0.1
         self.speed = 6.0
         self.score = 0.0
         self.n_keys = 0
@@ -143,16 +143,16 @@ class PlayerAgent(Agent):
     def fire(self):
         if self.magic > 0.0:
             self.action = {"action": "fire", "direction": self.direction}
-            self.magic -= 0.25
+            self.magic -= 0.4
 
 
 class EnemyAgent(Agent):
     def __init__(self, properties):
         Agent.__init__(self, properties)
         self.MAGIC_SPEED = 0.05
-        self.speed = 3.0
-        self.direction_change_period = 1.0
-        self.shooting_timer = 0.0
+        self.speed = 2.0
+        self.direction_change_period = 1.5
+        self.shooting_timer = uniform(0.2, 2.0)
         self.timer = 0.0
         self.change_direction()
         self.last_position = self.position.copy()
@@ -169,15 +169,15 @@ class EnemyAgent(Agent):
 
     def update(self, delta: float):
         self.timer += delta
-        self.shooting_timer += delta
+        self.shooting_timer -= delta
         if self.timer > self.direction_change_period:
             self.timer = 0.0
             self.change_direction()
         if self.position == self.last_position:
             self.change_direction()
-        if self.shooting_timer > 1.6:
+        if self.shooting_timer < 0.0:
             self.fire()
-            self.shooting_timer = 0.0
+            self.shooting_timer = uniform(0.25, 2.5)
         Agent.update(self, delta)
         self.last_position = self.position.copy()
 
@@ -227,7 +227,7 @@ class Animation:
 
 
 TILES = (" ", "1", "2", "3", "w")
-OBJECTS = ("v", "h", "*", "k", "t", "d")
+OBJECTS = ("v", "h", "*", "k", "t", "d", "s")
 
 
 class Environment:
@@ -276,6 +276,9 @@ class Environment:
                     self.collisions[i][j] = 1
                 else:
                     self.collisions[i][j] = 2
+                # Water
+                if self.objects[i][j] == "w":
+                    self.collisions[i][j] = 1
                 # Bridges
                 if self.objects[i][j] in ("v", "h"):
                     self.collisions[i][j] = 0
@@ -333,6 +336,8 @@ class Environment:
         elif self.objects[y][x] == "k":
             self.get_player().n_keys += 1
             self.objects[y][x] = " "
+        elif self.objects[y][x] == "s":
+            self.player.health_points -= delta * 0.4
 
     def update_animations(self, delta: float):
         retained = []
@@ -383,7 +388,7 @@ class Environment:
                     agent.position.y += directions[index]
 
     def displace_agents(self, delta):
-        for name, agent in self.agents:
+        for _, agent in self.agents:
             agent.position += agent.direction * delta * agent.speed
             self.push_out(agent)
 
@@ -412,8 +417,12 @@ class Environment:
                 retained.append(self.projectiles[i])
             else:
                 p = self.projectiles[i].position
-                self.animations.append(Animation("flame", p))
-                self.burn(p)
+                if self.projectiles[i].name == "fire":
+                    self.animations.append(Animation("flame", p))
+                    self.burn(p, "fire")
+                elif self.projectiles[i].name == "fire2":
+                    self.animations.append(Animation("flame2", p))
+                    self.burn(p, "fire2")
         self.projectiles = retained
 
     def update_agents(self, delta):
@@ -433,12 +442,23 @@ class Environment:
             if agent != self.player:
                 distance = (agent.position - self.player.position).norm()
                 if distance < 1.0:
-                    self.player.health_points -= delta * 0.15
+                    self.player.health_points -= delta * 0.2
 
-    def burn(self, position):
-        for _, agent in self.agents:
+    def burn(self, position, explosion: str):
+        retained = []
+        for name, agent in self.agents:
             if (
                 abs(agent.position.x - position.x) < 1
                 and abs(agent.position.y - position.y) < 1
             ):
-                agent.health_points -= 0.4
+                if name == "player":
+                    if explosion == "fire":
+                        agent.health_points -= 0.05
+                    else:
+                        agent.health_points -= 0.4
+                else:
+                    if explosion == "fire":
+                        agent.health_points -= 0.51
+            if agent.health_points > 0.0:
+                retained.append((name, agent, ))
+        self.agents = retained

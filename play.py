@@ -22,8 +22,8 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 
 parser = argparse.ArgumentParser(
-    prog='Auroal',
-    description='Launch the game'
+    prog="Auroal",
+    description="Launch the game."
 )
 parser.add_argument(
     "-d",
@@ -53,6 +53,7 @@ pygame.display.set_caption("Auroral")
 screen = pygame.display.set_mode(SCREEN_DIMENSIONS)
 
 ALL_LEVELS = [f for f in os.listdir("assets/levels") if f.endswith(".json")]
+ALL_THEMES = [f for f in os.listdir("assets/themes") if f.isnumeric()]
 
 
 def menu(level: int, theme: int) -> int:
@@ -88,20 +89,30 @@ def menu(level: int, theme: int) -> int:
                 exit()
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_LEFT, pygame.K_a):
-                    level -= 1
-                    if level < 0:
-                        level = len(ALL_LEVELS)
+                    if focus == 0:
+                        level -= 1
+                        if level < 0:
+                            level = len(ALL_LEVELS)
+                    elif focus == 1:
+                        theme -= 1
+                        if theme < 0:
+                            theme = len(ALL_THEMES)
                 if event.key in (pygame.K_RIGHT, pygame.K_d):
-                    level += 1
-                    if level > len(ALL_LEVELS):
-                        level = 0
+                    if focus == 0:
+                        level += 1
+                        if level > len(ALL_LEVELS):
+                            level = 0
+                    elif focus == 1:
+                        theme += 1
+                        if theme > len(ALL_THEMES):
+                            theme = 1
                 if event.key in (pygame.K_DOWN, pygame.K_s):
                     focus += 1
-                    if level > 1:
+                    if focus > 1:
                         focus = 0
                 if event.key in (pygame.K_UP, pygame.K_w):
                     focus -= 1
-                    if level < 0:
+                    if focus < 0:
                         focus = 1
                 if event.key in (pygame.K_RETURN, ):
                     stop = True
@@ -142,6 +153,6 @@ while True:
     level, theme = menu(level, theme)
     if level is None:
         break
-    file = f"assets/levels/{ALL_LEVELS[level - 1]}" if level > 0 else ""
+    file = f"assets/levels/{level}.json" if level > 0 else ""
     score = game.play(screen, file, str(theme), DEBUG)
     display_score(screen, score)

@@ -287,7 +287,7 @@ def render_isometric(env: environment.Environment,
                     )
             # Animations
             for a in env.animations:
-                p = a.position.y + a.position.x - 0.75
+                p = a.position.y + a.position.x - 1.0
                 if p <= diagonal and p + 1 > diagonal:
                     ix = resources["matches"]["animations"][a.name][1]
                     iy = resources["matches"]["animations"][a.name][0]
@@ -298,7 +298,7 @@ def render_isometric(env: environment.Environment,
                     screen.blit(
                         resources["images"]["animations"],
                         (x + x_o, y + y_o),
-                        (ix + 1, iy * AGENT_N + iy + 1, AGENT_N, AGENT_N)
+                        (ix * AGENT_N + ix + 1, iy * AGENT_N + iy + 1, AGENT_N, AGENT_N)
                     )
             # Indices
             row -= 1
