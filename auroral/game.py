@@ -12,7 +12,7 @@ import time
 from collections import deque
 
 from auroral.environment import Vector
-from auroral import environment, renderer
+from auroral import environment, render
 
 
 MATCHES_FILE = "assets/matches.json"
@@ -31,7 +31,7 @@ def play(
         tilemap = environment.generate_level(10)
     env = environment.Environment(tilemap)
     player = env.get_player()
-    resources = renderer.load_resources("assets/", MATCHES_FILE, theme)
+    resources = render.load_resources("assets/", MATCHES_FILE, theme)
     ti = time.time()
     direction = Vector(0.0, 0.0)
     if debug:
@@ -77,7 +77,7 @@ def play(
         # Render on the surface.
         screen.fill((50, 50, 50))
         position = env.get_player().position
-        renderer.render_isometric(
+        render.isometric(
             env,
             screen,
             resources,
@@ -85,10 +85,10 @@ def play(
             (position.x, position.y),
             delta
         )
-        renderer.render_agent_state(env, screen)
+        render.agent_state(env, screen)
         if debug:
             delta_buffer.append(delta)
-            renderer.render_debug(
+            render.debug(
                 screen,
                 delta,
                 delta_buffer,

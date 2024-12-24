@@ -65,7 +65,7 @@ def clamp(n, min, max):
 period = 0.0
 
 
-def render(
+def orthogonal(
         env: environment.Environment,
         screen,
         resources,
@@ -147,7 +147,8 @@ def render(
         )
 
 
-def render_isometric(env: environment.Environment,
+def isometric(
+        env: environment.Environment,
         screen,
         resources,
         dimension,
@@ -163,9 +164,9 @@ def render_isometric(env: environment.Environment,
     AGENT_N = 32
     X_MAX = len(env.tilemap)
     x_o = (camera[1] * N - camera[0] * N + dimension[0]) / 2
-    x_o = clamp(x_o, 0.0, X_MAX * N / 2)
+    x_o = clamp(x_o, 0.0, X_MAX * N * 2 ** 0.5 / 2)
     y_o = (-1 * camera[1] * M - camera[0] * M + dimension[0]) / 2
-    y_o = clamp(y_o, -1 * X_MAX * M / 4, 0.0)
+    y_o = clamp(y_o, -1 * X_MAX * M * 2 ** 0.5 / 4, 0.0)
     D = len(env.tilemap)
     # Display the floor
     for diagonal in range(D * 2 + 1):
@@ -306,14 +307,14 @@ def render_isometric(env: environment.Environment,
 
 
 
-def render_agent_state(env, screen):
+def agent_state(env, screen):
     pygame.draw.rect(screen, BLACK, (6, 6, 128, 16))
     pygame.draw.rect(screen, BLUE, (8, 8, env.get_player().magic * 124, 12))
     pygame.draw.rect(screen, BLACK, (6, 24, 128, 16))
     pygame.draw.rect(screen, RED, (8, 26, env.get_player().health_points * 124, 12))
 
 
-def render_debug(
+def debug(
         screen,
         delta,
         delta_buffer,
