@@ -20,14 +20,15 @@ MATCHES_FILE = "assets/matches.json"
 
 def play(
         screen: pygame.Surface,
-        level: str,
-        dimensions: tuple[int],
+        level_file: str,
+        theme: str,
         debug: bool
     ) -> tuple[int]:
-    tilemap = environment.load(level)
+    dimensions = (screen.get_width(), screen.get_height())
+    tilemap = environment.load(level_file)
     env = environment.Environment(tilemap)
     player = env.get_player()
-    resources = renderer.load_resources("assets/", MATCHES_FILE, "c")
+    resources = renderer.load_resources("assets/", MATCHES_FILE, theme)
     ti = time.time()
     direction = Vector(0.0, 0.0)
     if debug:
@@ -36,6 +37,7 @@ def play(
         delta_buffer = deque(maxlen=500)
 
     while True:
+        # Inputs.
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
@@ -66,10 +68,12 @@ def play(
         now = time.time()
         delta = now - ti
         ti = now
+        # Update the game.
         if env.update(delta):
-            break
-        position = env.get_player().position
+            return env.get_score()
+        # Render on the surface.
         screen.fill((50, 50, 50))
+        position = env.get_player().position
         renderer.render_isometric(
             env,
             screen,

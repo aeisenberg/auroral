@@ -9,6 +9,7 @@ File information:
 
 import json
 import numpy as np
+from random import uniform, choice
 from math import atan, pi, sin, cos
 
 
@@ -23,7 +24,7 @@ def load(level_filename: str) -> tuple:
     """
     with open(level_filename) as f:
         content = json.load(f)
-    tilemap = [list(line) for line in content["tilemap"]]
+    tilemap = [list(line) for line in content]
     return tilemap
 
 
@@ -55,6 +56,9 @@ class Vector():
 
     def __repr__(self):
         return f"<{self.x}, {self.y}>"
+
+    def __eq__(self, other):
+        return other.x == self.x and other.y == self.y
 
     def rotate(self, r):
         r = r * pi / 180
@@ -105,7 +109,48 @@ class PlayerAgent(Agent):
     def fire(self):
         if self.magic > 0.0:
             self.action = {"action": "fire", "direction": self.direction}
-            self.magic -= 0.2
+            self.magic -= 0.25
+
+
+class EnemyAgent(Agent):
+    def __init__(self, properties):
+        Agent.__init__(self, properties)
+        self.MAGIC_SPEED = 0.05
+        self.speed = 3.0
+        self.direction_change_period = 1.0
+        self.shooting_timer = 0.0
+        self.timer = 0.0
+        self.change_direction()
+        self.last_position = self.position.copy()
+
+    def change_direction(self):
+        self.direction = choice(
+            (
+                Vector(1.0, 0.0),
+                Vector(0.0, 1.0),
+                Vector(-1.0, 0.0),
+                Vector(0.0, -1.0)
+            )
+        )
+
+    def update(self, delta: float):
+        self.timer += delta
+        self.shooting_timer += delta
+        if self.timer > self.direction_change_period:
+            self.timer = 0.0
+            self.change_direction()
+        if self.position == self.last_position:
+            self.change_direction()
+        if self.shooting_timer > 1.6:
+            self.fire()
+            self.shooting_timer = 0.0
+        Agent.update(self, delta)
+        self.last_position = self.position.copy()
+
+    def fire(self):
+        if self.magic > 0.0:
+            self.action = {"action": "fire2", "direction": self.direction}
+            self.magic -= 0.1
 
 
 class Projectile:
@@ -119,6 +164,8 @@ class Projectile:
         self.lifetime = 3.0
         if self.name == "fire":
             self.speed = 20.0
+        if self.name == "fire2":
+            self.speed = 10.0
 
     def update(self, delta):
         self.position += self.direction * self.speed * delta
@@ -145,8 +192,8 @@ class Animation:
         self.lifetime = 0.0
 
 
-TILE_CHARACTERS = (" ", "1", "2", "3", "w")
-OBJECT_CHARACTERS = ("v", "h", "*", "k", "t", "d")
+TILES = (" ", "1", "2", "3", "w")
+OBJECTS = ("v", "h", "*", "k", "t", "d")
 
 
 class Environment:
@@ -154,8 +201,12 @@ class Environment:
             self,
             tilemap: list[list[int]],
             ):
-        self.tilemap = [list(c if c in TILE_CHARACTERS else " " for c in l) for l in tilemap]
-        self.objects = [list(c if c in OBJECT_CHARACTERS else " " for c in l) for l in tilemap]
+        self.tilemap = [
+            list(c if c in TILES else " " for c in l) for l in tilemap
+        ]
+        self.objects = [
+            list(c if c in OBJECTS else " " for c in l) for l in tilemap
+        ]
         self.projectiles = []
         self.agents = []
         self.animations = []
@@ -165,7 +216,13 @@ class Environment:
                     self.agents.append(("player", PlayerAgent((j, i))))
                     self.player = self.agents[-1][1]
                     self.tilemap[i][j] = " "
-        self.n_points = sum([len(list(c for c in l if c == "*")) for l in tilemap])
+                elif tilemap[i][j] == "e":
+                    self.agents.append(("enemy", EnemyAgent((j, i))))
+                    self.tilemap[i][j] = " "
+        self.n_points = sum(
+            [len(list(c for c in l if c == "*")) for l in tilemap]
+        )
+        self.n_total_points = self.n_points
         self.collisions = np.zeros((len(self.tilemap), len(self.tilemap[0])))
         self.refresh_collisions()
 
@@ -199,6 +256,12 @@ class Environment:
         self.update_objects(delta)
         return self.is_end_state()
 
+    def get_score(self) -> tuple[int]:
+        if self.player.health_points < 0:
+            return None
+        else:
+            return int(self.player.score), self.n_total_points
+
     def is_end_state(self):
         if self.player.health_points <= 0.0:
             return True
@@ -207,7 +270,8 @@ class Environment:
         return False
 
     def update_objects(self, delta: float):
-        x, y = int(self.player.position.x + 0.5), int(self.player.position.y + 0.5)
+        x = int(self.player.position.x + 0.5)
+        y = int(self.player.position.y + 0.5)
         for i in range(len(self.objects)):
             for j in range(len(self.objects[0])):
                 if self.objects[i][j] == "d" and self.get_player().n_keys:
@@ -218,7 +282,8 @@ class Environment:
                         self.collisions[i][j] = 0
 
     def collect_objects(self, delta: float):
-        x, y = int(self.player.position.x + 0.5), int(self.player.position.y + 0.5)
+        x = int(self.player.position.x + 0.5)
+        y = int(self.player.position.y + 0.5)
         if x < 0:
             x = 0
         if y < -1:
@@ -323,8 +388,18 @@ class Environment:
             if agent.action:
                 start = agent.position + agent.front
                 if agent.action["action"] == "fire":
-                    self.projectiles.append(Projectile("fire", start, agent.front.copy()))
+                    self.projectiles.append(
+                        Projectile("fire", start, agent.front.copy())
+                    )
+                if agent.action["action"] == "fire2":
+                    self.projectiles.append(
+                        Projectile("fire2", start, agent.front.copy())
+                    )
                 agent.action = None
+            if agent != self.player:
+                distance = (agent.position - self.player.position).norm()
+                if distance < 1.0:
+                    self.player.health_points -= delta * 0.15
 
     def burn(self, position):
         for _, agent in self.agents:
@@ -332,4 +407,4 @@ class Environment:
                 abs(agent.position.x - position.x) < 1
                 and abs(agent.position.y - position.y) < 1
             ):
-                agent.health_points -= 0.2
+                agent.health_points -= 0.4

@@ -27,10 +27,12 @@
         "d": 1
     },
     "agent_image": {
-        "player": [0, 3]
+        "player": [0, 3],
+        "enemy": [0, 0]
     },
     "projectile_image": {
-        "fire": [0, 0]
+        "fire": [0, 0],
+        "fire2": [1, 0]
     },
     "animations": {
         "flame": [0, 0]
