@@ -76,6 +76,8 @@ def menu(level: int, theme: int) -> int:
         text = f"Begin the level with ENTER."
         render(instruction_font, text, 40)
         text = f"-> LEVEL: {level}" if focus == 0 else f"LEVEL: {level}"
+        if level == 0:
+            text = f"-> LEVEL: Random" if focus == 0 else f"LEVEL: Random"
         render(font, text, SCREEN_DIMENSIONS[1] / 3)
         text = f"-> THEME: {theme}" if focus == 1 else f"THEME: {theme}"
         render(font, text, SCREEN_DIMENSIONS[1] / 2)
@@ -87,12 +89,12 @@ def menu(level: int, theme: int) -> int:
             if event.type == pygame.KEYDOWN:
                 if event.key in (pygame.K_LEFT, pygame.K_a):
                     level -= 1
-                    if level < 1:
+                    if level < 0:
                         level = len(ALL_LEVELS)
                 if event.key in (pygame.K_RIGHT, pygame.K_d):
                     level += 1
                     if level > len(ALL_LEVELS):
-                        level = 1
+                        level = 0
                 if event.key in (pygame.K_DOWN, pygame.K_s):
                     focus += 1
                     if level > 1:
@@ -140,6 +142,6 @@ while True:
     level, theme = menu(level, theme)
     if level is None:
         break
-    file = f"assets/levels/{ALL_LEVELS[level - 1]}"
+    file = f"assets/levels/{ALL_LEVELS[level - 1]}" if level > 0 else ""
     score = game.play(screen, file, str(theme), DEBUG)
     display_score(screen, score)

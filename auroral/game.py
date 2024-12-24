@@ -25,7 +25,10 @@ def play(
         debug: bool
     ) -> tuple[int]:
     dimensions = (screen.get_width(), screen.get_height())
-    tilemap = environment.load(level_file)
+    try:
+        tilemap = environment.load(level_file)
+    except:
+        tilemap = environment.generate_level(10)
     env = environment.Environment(tilemap)
     player = env.get_player()
     resources = renderer.load_resources("assets/", MATCHES_FILE, theme)

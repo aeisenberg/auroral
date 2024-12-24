@@ -9,7 +9,7 @@ File information:
 
 import json
 import numpy as np
-from random import uniform, choice
+from random import uniform, choice, randint
 from math import atan, pi, sin, cos
 
 
@@ -25,6 +25,40 @@ def load(level_filename: str) -> tuple:
     with open(level_filename) as f:
         content = json.load(f)
     tilemap = [list(line) for line in content]
+    return tilemap
+
+
+def generate_level(n: int) -> tuple:
+    """Create a random environment."""
+    tilemap = [[list("3" + " " * (n - 2) + "3") for _ in range(n)] for _ in range(n)][0]
+    tilemap[0] = list("3" * n)
+    tilemap[-1] = list("3" * n)
+    tilemap[randint(1, n - 2)][randint(1, n - 2)] = "p"
+    n_points = randint(1, 3)
+    while True:
+        i, j = randint(1, n - 2), randint(1, n - 2)
+        c = tilemap[i][j]
+        if c == " ":
+            tilemap[i][j] = "*"
+            n_points -= 1
+            if n_points <= 0:
+                break
+
+    def add_element(c: str, a: int, b: int):
+        for _ in range(randint(a, b)):
+            i, j = randint(1, n - 2), randint(1, n - 2)
+            o = tilemap[i][j]
+            if o == " ":
+                tilemap[i][j] = c
+
+    add_element("3", 5, 8)
+    add_element("w", 0, 6)
+    add_element("t", 0, 20)
+    if uniform(0.0, 1.0) < 0.5:
+        add_element("d", 1, 1)
+        add_element("k", 1, 1)
+    if uniform(0.0, 1.0) < 0.3:
+        add_element("e", 1, 1)
     return tilemap
 
 
