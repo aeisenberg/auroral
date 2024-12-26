@@ -278,6 +278,7 @@ class Environment:
         self.projectiles = []
         self.agents = []
         self.animations = []
+        self.points = []
         for i in range(len(tilemap)):
             for j in range(len(tilemap[0])):
                 if tilemap[i][j] == "p":
@@ -287,9 +288,9 @@ class Environment:
                 elif tilemap[i][j] == "e":
                     self.agents.append(("enemy", EnemyAgent((j, i))))
                     self.tilemap[i][j] = " "
-        self.n_points = sum(
-            [len(list(c for c in l if c == "*")) for l in tilemap]
-        )
+                elif tilemap[i][j] == "*":
+                    self.points.append((j, i))
+        self.n_points = len(self.points)
         self.n_total_points = self.n_points
         self.collisions = np.zeros((len(self.tilemap), len(self.tilemap[0])))
         self.refresh_collisions()
@@ -320,7 +321,10 @@ class Environment:
 
     def update(self, delta: float) -> bool:
         original_hp = self.player.health_points
+        original_magic = self.player.magic
         original_score = self.player.score
+        original_distance = self.get_distance_to_closets_point()
+        original_distance_reward = 1.0 - (original_distance / len(self.tilemap))
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
@@ -328,9 +332,25 @@ class Environment:
         self.collect_objects(delta)
         self.update_objects(delta)
         final_hp = self.player.health_points
+        final_magic = self.player.magic
         final_score = self.player.score
-        reward = (final_score - original_score) + (final_hp - original_hp)
+        final_distance = self.get_distance_to_closets_point()
+        final_distance_reward = 1.0 - (final_distance / len(self.tilemap))
+        reward = (
+            (final_score - original_score) * 10.0
+            + (final_hp - original_hp)
+            + (final_magic - original_magic)
+            + (final_distance_reward - original_distance_reward) * 2.0
+        )
         return reward, self.is_end_state()
+
+    def get_distance_to_closets_point(self) -> float:
+        d = float("inf")
+        for p in self.points:
+            distance = abs(p[0] - self.player.position.x) + abs(p[1] - self.player.position.y)
+            if distance < d:
+                d = distance
+        return d
 
     def get_score(self) -> tuple[int]:
         if self.player.health_points < 0:

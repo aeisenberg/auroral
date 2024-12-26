@@ -1,23 +1,23 @@
 {
-    "model": "random",
-    "maximum_n_steps": 200,
-    "n_episodes": 10,
-    "framerate": 24,
+    "model": "dqn-1-mid",
+    "maximum_n_steps": 100,
+    "n_episodes": 500,
+    "framerate": 15,
     "levels": [
         {
-            "frequency": 0.5,
+            "frequency": 1.0,
             "theme": "1",
             "n": 10,
-            "points": [0, 1],
-            "walls": [0, 3],
-            "water": [0, 3],
-            "trees": [0, 3],
-            "doors": [0, 1],
-            "enemies": [0, 1],
-            "danger": [0, 3]
+            "points": 1,
+            "walls": 0,
+            "water": 0,
+            "trees": 0,
+            "doors": 0,
+            "enemies": 0,
+            "danger": 0
         },
         {
-            "frequency": 0.5,
+            "frequency": 0.0,
             "theme": "1",
             "n": 20,
             "points": [0, 1],

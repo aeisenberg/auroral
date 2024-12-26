@@ -39,11 +39,11 @@ import pygame
 import argparse
 from time import sleep, time
 import json
-from random import choices
-from sys import stdout
+from random import uniform, choices, choice
 
 from auroral import environment, game, render
-from models import random
+from models.random import Random
+from models import dqn
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -105,7 +105,7 @@ if not NO_GRAPHICS:
     pygame.init()
     pygame.display.set_caption("Auroral")
     if DEBUG:
-        meta_screen = pygame.display.set_mode((600, 512))
+        meta_screen = pygame.display.set_mode((650, 256))
     else:
         meta_screen = pygame.display.set_mode(SCREEN_DIMENSIONS)
 
@@ -120,12 +120,43 @@ DELTA = 1.0 / configuration["framerate"]
 
 # Create the model.
 if configuration["model"] == "random":
-    model = random.Model(10, 25)
+    model = Random(10, 25)
+elif configuration["model"] == "dqn-1-shallow":
+    model = dqn.DQN_1_shallow()
+    model.to("cuda")
+elif configuration["model"] == "dqn-1-mid":
+    model = dqn.DQN_1_mid()
+    model.to("cuda")
+
+
+try:
+    n_parameters = sum(p.numel() for p in model.parameters())
+    n_trainable_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Number of parameters: {n_parameters}")
+    print(f"Number of trainable parameters: {n_trainable_parameters}")
+except:
+    pass
+
+
+def generate_random_action():
+    return {
+        "up": choice((0, 1)),
+        "down": choice((0, 1)),
+        "left": choice((0, 1)),
+        "right": choice((0, 1)),
+        "fire": choice((0, 1)),
+    }
+
 
 # Training loop.
 N_EPISODES = configuration["n_episodes"]
+INITIAL_EPSILON = 0.99
+training_start_time = time()
+
 for episode in range(N_EPISODES):
     print(f"Episode {episode}")
+    epsilon = (1.0 - (episode / N_EPISODES) ) * INITIAL_EPSILON
+    episode_start_time = time()
     level_configuration = choices(
         population=configuration["levels"],
         weights=[l["frequency"] for l in configuration["levels"]],
@@ -158,7 +189,7 @@ for episode in range(N_EPISODES):
 
     def display_info(text, line):
         text_surface = font.render(text, False, (255, 255, 255))
-        meta_screen.blit(text_surface, (300, 24 + (24 * line)))
+        meta_screen.blit(text_surface, (280, 24 + (24 * line)))
 
     # Prepare the next episode.
     update_screen()
@@ -168,15 +199,37 @@ for episode in range(N_EPISODES):
         cumulative_reward = 0.0
 
     N_STEPS = configuration["maximum_n_steps"]
+    pure_exploitation = (DEBUG and episode % 10 == 0)
     for step in range(N_STEPS):
-        print(f"\033[FEpisode: {episode} / {N_EPISODES}. Step: {step + 1} / {N_STEPS}")
+        random_action = generate_random_action()
         t0 = time()
+        if not pure_exploitation:
+            print(f"\033[FEpisode: {episode + 1} / {N_EPISODES}. "
+                + f"Step: {step + 1} / {N_STEPS}"
+                + f"    Episode duration (s): {(t0 - episode_start_time):.4}"
+                + f"    Training duration (s): {(t0 - training_start_time):.4}"
+            )
         state = pygame.surfarray.array3d(screen).copy()
-        action = model.act(state)
+        if epsilon < uniform(0.0, 1.0) or pure_exploitation:
+            action = model.act(state)
+            if pure_exploitation:
+                pass#print(model.prediction(state))
+        else:
+            action = random_action
         reward, done = game.frame(env, DELTA, action)
+
+        # Penalize inconductive inputs.
+        if action["up"] and action["down"]:
+            reward -= 0.1
+        if action["left"] and action["right"]:
+            reward -= 0.1
+        if action["up"] == 0.0 and action["down"] == 0.0 and action["left"] == 0.0 and action["right"] == 0.0:
+            reward -= 0.1
+
         update_screen()
         next_state = pygame.surfarray.array3d(screen).copy()
-        model.step(state, action, reward, next_state, done)
+        if not pure_exploitation:
+            model.step(state / 255.0, action, reward, next_state / 255.0, done)
         t1 = time()
         delta = t1 - t0
         if not NO_GRAPHICS:
@@ -187,7 +240,12 @@ for episode in range(N_EPISODES):
                 meta_screen.fill((0, 0, 0))
                 display_info(f"Episode: {episode}    Step: {step}", 0)
                 display_info(f"Delta: {delta:.4} s", 1)
-                display_info(f"Cumulative reward: {cumulative_reward}", 2)
+                display_info(f"Cumulative reward: {cumulative_reward:.4}", 2)
+                if pure_exploitation:
+                    display_info(f"Explore: 0.0. Exploit: 1.0", 3)
+                else:
+                    display_info(f"Explore: {epsilon:.2}. Exploit: {(1.0 - epsilon):.2}", 3)
+
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()

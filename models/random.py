@@ -11,7 +11,7 @@ from random import choice
 import numpy as np
 
 
-class Model():
+class Random():
 
     def __init__(self, direction_change_frequency: int, fire_frequency: int):
         """Basic model.
