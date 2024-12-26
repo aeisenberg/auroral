@@ -1,8 +1,11 @@
 """
-Utility script.
+Play the game. Intended to be used by humans for testing. Or for fun!
 
 Usage:
-    py play.py  # Start the game in interactive mode.
+
+>>> python3 play.py
+>>> python3 play.py --debug # Add debugging information
+>>> python3 play.py -s X # Change the size of the window to X by X pixels
 
 File information:
     - Author: Vincent Therrien (therrien.vincent.2@courrier.uqam.ca)
@@ -22,7 +25,7 @@ dname = os.path.dirname(abspath)
 os.chdir(dname)
 
 parser = argparse.ArgumentParser(
-    prog="Auroal",
+    prog="Auroral",
     description="Launch the game."
 )
 parser.add_argument(

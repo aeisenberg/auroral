@@ -28,13 +28,48 @@ def load(level_filename: str) -> tuple:
     return tilemap
 
 
-def generate_level(n: int) -> tuple:
-    """Create a random environment."""
+def generate_level(
+        n: int,
+        points: int | tuple[int] = (1, 3),
+        walls: int | tuple[int] = (4, 8),
+        water: int | tuple[int] = (0, 5),
+        trees: int | tuple[int] = (0, 3),
+        doors: int | tuple[int] = (0, 1),
+        enemies: int | tuple[int] = (0, 1),
+        danger: int | tuple[int] = (0, 2)
+        ) -> tuple:
+    """Create a random environment.
+
+    Args:
+        n: Dimension of the level.
+        points: Number of points in the level. If a tuple is provided, it is
+            interpreted as a range and the number of points is randomly
+            sampled from it (including extrema).
+        water: Amount of water tiles.
+        trees: Amount of trees.
+        doors: Amount of doors.
+        enemies: Number of enemies.
+        danger: Number of danger zones.
+    """
+    if type(points) == int:
+        points = (points, points)
+    if type(walls) == int:
+        walls = (walls, walls)
+    if type(water) == int:
+        water = (water, water)
+    if type(trees) == int:
+        trees = (trees, trees)
+    if type(doors) == int:
+        doors = (doors, doors)
+    if type(enemies) == int:
+        enemies = (enemies, enemies)
+    if type(danger) == int:
+        danger = (danger, danger)
     tilemap = [[list("3" + " " * (n - 2) + "3") for _ in range(n)] for _ in range(n)][0]
     tilemap[0] = list("3" * n)
     tilemap[-1] = list("3" * n)
     tilemap[randint(1, n - 2)][randint(1, n - 2)] = "p"
-    n_points = randint(1, 3)
+    n_points = randint(points[0], points[1])
     while True:
         i, j = randint(1, n - 2), randint(1, n - 2)
         c = tilemap[i][j]
@@ -51,14 +86,13 @@ def generate_level(n: int) -> tuple:
             if o == " ":
                 tilemap[i][j] = c
 
-    add_element("3", 5, 8)
-    add_element("w", 0, 6)
-    add_element("t", 0, 20)
-    if uniform(0.0, 1.0) < 0.99:
-        add_element("d", 1, 1)
-        add_element("k", 1, 1)
-    if uniform(0.0, 1.0) < 0.3:
-        add_element("e", 1, 1)
+    add_element("d", doors[0], doors[1])
+    add_element("k", doors[0], doors[1])
+    add_element("3", walls[0], walls[1])
+    add_element("w", water[0], water[1])
+    add_element("t", trees[0], trees[1])
+    add_element("e", enemies[0], enemies[1])
+    add_element("s", danger[0], danger[1])
     return tilemap
 
 

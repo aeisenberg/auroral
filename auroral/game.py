@@ -110,12 +110,10 @@ def play(
 
 def frame(
         env: environment.Environment,
-        screen: pygame.Surface,
-        resources: dict,
         delta: float,
         action: dict
     ) -> tuple:
-    """Process one frame of the game logic and display on screen.
+    """Process one frame of the game logic and display the environment.
 
     This function is intended to be used in non-interactive mode to train
     machine learning models.
@@ -141,25 +139,12 @@ def frame(
     if action["down"]:
         direction.y += 1.0
     if action["left"]:
-        direction.y -= 1.0
+        direction.x -= 1.0
     if action["right"]:
-        direction.y += 1.0
+        direction.x += 1.0
     if action["fire"]:
         player.fire()
     player.direction = direction.copy()
     player.direction.normalize()
     player.direction.rotate(-45)
-    reward, is_terminal = env.update(delta)
-    # Render on screen.
-    dimensions = (screen.get_width(), screen.get_height())
-    screen.fill((50, 50, 50))
-    position = env.get_player().position
-    render.isometric(
-        env,
-        screen,
-        resources,
-        dimensions,
-        (position.x, position.y),
-        delta
-    )
-    return reward, is_terminal
+    return env.update(delta)
