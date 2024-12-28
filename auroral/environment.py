@@ -319,12 +319,11 @@ class Environment:
                     self.collisions[i][j] = 0
                     self.tilemap[i][j] = "w"
 
-    def update(self, delta: float) -> bool:
+    def update(self, delta: float) -> tuple:
         original_hp = self.player.health_points
         original_magic = self.player.magic
         original_score = self.player.score
         original_distance = self.get_distance_to_closets_point()
-        original_distance_reward = 1.0 - (original_distance / len(self.tilemap))
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
@@ -335,13 +334,18 @@ class Environment:
         final_magic = self.player.magic
         final_score = self.player.score
         final_distance = self.get_distance_to_closets_point()
-        final_distance_reward = 1.0 - (final_distance / len(self.tilemap))
-        reward = (
-            (final_score - original_score) * 10.0
-            + (final_hp - original_hp)
-            + (final_magic - original_magic)
-            + (final_distance_reward - original_distance_reward) * 2.0
-        )
+
+        reward = -0.1  # Time penalty.
+        if final_distance < original_distance:
+            reward += 1
+        else:
+            reward -= 0.1
+        if final_score > original_score:
+            reward += 10
+        if final_magic < original_magic:
+            reward -= 0.1
+        if final_hp < original_hp:
+            reward -= 0.1
         return reward, self.is_end_state()
 
     def get_distance_to_closets_point(self) -> float:

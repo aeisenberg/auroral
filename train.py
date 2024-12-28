@@ -125,27 +125,15 @@ elif configuration["model"] == "dqn-1-shallow":
     model = dqn.DQN_1_shallow()
     model.to("cuda")
 elif configuration["model"] == "dqn-1-mid":
-    model = dqn.DQN_1_mid()
-    model.to("cuda")
+    model = dqn.DQN(dqn.DQN_1_mid(), dqn.DQN_1_mid())
 
 
 try:
     n_parameters = sum(p.numel() for p in model.parameters())
-    n_trainable_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
     print(f"Number of parameters: {n_parameters}")
-    print(f"Number of trainable parameters: {n_trainable_parameters}")
 except:
     pass
 
-
-def generate_random_action():
-    return {
-        "up": choice((0, 1)),
-        "down": choice((0, 1)),
-        "left": choice((0, 1)),
-        "right": choice((0, 1)),
-        "fire": choice((0, 1)),
-    }
 
 
 # Training loop.
@@ -193,15 +181,17 @@ for episode in range(N_EPISODES):
 
     # Prepare the next episode.
     update_screen()
-    model.prepare_episode()
     if DEBUG:
         meta_screen.fill((0, 0, 0))
         cumulative_reward = 0.0
 
     N_STEPS = configuration["maximum_n_steps"]
-    pure_exploitation = (DEBUG and episode % 10 == 0)
+    pure_exploitation = (DEBUG and (episode + 1) % 10 == 0)
+    if pure_exploitation:
+        model.prepare_episode(0.0)
+    else:
+        model.prepare_episode(epsilon)
     for step in range(N_STEPS):
-        random_action = generate_random_action()
         t0 = time()
         if not pure_exploitation:
             print(f"\033[FEpisode: {episode + 1} / {N_EPISODES}. "
@@ -210,21 +200,10 @@ for episode in range(N_EPISODES):
                 + f"    Training duration (s): {(t0 - training_start_time):.4}"
             )
         state = pygame.surfarray.array3d(screen).copy()
-        if epsilon < uniform(0.0, 1.0) or pure_exploitation:
-            action = model.act(state)
-            if pure_exploitation:
-                pass#print(model.prediction(state))
-        else:
-            action = random_action
+        action = model.act(state)
+        if pure_exploitation:
+            print(f"{model.prediction(state)}")
         reward, done = game.frame(env, DELTA, action)
-
-        # Penalize inconductive inputs.
-        if action["up"] and action["down"]:
-            reward -= 0.1
-        if action["left"] and action["right"]:
-            reward -= 0.1
-        if action["up"] == 0.0 and action["down"] == 0.0 and action["left"] == 0.0 and action["right"] == 0.0:
-            reward -= 0.1
 
         update_screen()
         next_state = pygame.surfarray.array3d(screen).copy()
@@ -238,13 +217,14 @@ for episode in range(N_EPISODES):
             if DEBUG:
                 cumulative_reward += reward
                 meta_screen.fill((0, 0, 0))
-                display_info(f"Episode: {episode}    Step: {step}", 0)
+                display_info(f"Episode: {episode + 1}    Step: {step + 1}", 0)
                 display_info(f"Delta: {delta:.4} s", 1)
-                display_info(f"Cumulative reward: {cumulative_reward:.4}", 2)
+                display_info(f"Reward: {reward:.4}", 2)
+                display_info(f"Cumulative reward: {cumulative_reward:.4}", 3)
                 if pure_exploitation:
-                    display_info(f"Explore: 0.0. Exploit: 1.0", 3)
+                    display_info(f"Explore: 0.0. Exploit: 1.0", 4)
                 else:
-                    display_info(f"Explore: {epsilon:.2}. Exploit: {(1.0 - epsilon):.2}", 3)
+                    display_info(f"Explore: {epsilon:.2}. Exploit: {(1.0 - epsilon):.2}", 4)
 
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

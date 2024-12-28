@@ -134,6 +134,13 @@ def frame(
     # Perform the action.
     player = env.get_player()
     direction = Vector(0.0, 0.0)
+    action = {
+        "up": action[0],
+        "down": action[1],
+        "left": action[2],
+        "right": action[3],
+        "fire": action[4],
+    }
     if action["up"]:
         direction.y -= 1.0
     if action["down"]:
@@ -147,4 +154,12 @@ def frame(
     player.direction = direction.copy()
     player.direction.normalize()
     player.direction.rotate(-45)
-    return env.update(delta)
+    reward, done = env.update(delta)
+
+    # Penalize inconducive inputs.
+    # if action["up"] and action["down"]:
+    #     reward -= 1.0
+    # if action["left"] and action["right"]:
+    #     reward -= 1.0
+
+    return reward, done

@@ -1,7 +1,7 @@
 {
     "model": "dqn-1-mid",
     "maximum_n_steps": 100,
-    "n_episodes": 500,
+    "n_episodes": 1000,
     "framerate": 15,
     "levels": [
         {
