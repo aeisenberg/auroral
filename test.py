@@ -23,23 +23,28 @@ import torch.nn.functional as F
 import torch.optim as optim
 
 
-N_EPISODES = 3000
 GAME_SIZE = 16
 GAME_DIMENSIONS = 1
+LEARNING_RATE = 1e-3
+USE_CONVOLUTIONAL_LAYER = True
+N_FRAMES = 1
+
+N_EPISODES = 1500
 SCREEN_DIMENSION = (350, 128)
 N_STEPS = GAME_SIZE * 2
 BATCH_SIZE = 32
-TARGET_UPDATE_FREQUENCY = 100
+TARGET_UPDATE_FREQUENCY = 1000
 EVALUATION_FREQUENCY = 1000
 MEMORY_SIZE = 10000
-LEARNING_RATE = 1e-2
 GAMMA = 0.99
 REWARDS = {
     "reach objective": 10,
     "move closer to objective": 1,
     "move away from objective": -1,
-    "remain static": -0.5
+    "remain static": -0.5,
+    "out of bound penalty": -1
 }
+N_ACTIONS = 4
 
 
 class DQN(nn.Module):
@@ -47,16 +52,33 @@ class DQN(nn.Module):
         super(DQN, self).__init__()
         n2 = int(n / 2)
         n4 = int(n / 4)
+        # 1D
+        self.conv1d = nn.Conv1d(in_channels=1, out_channels=1, kernel_size=3, stride=1, padding=1)
         self.network = nn.Sequential(
             nn.Linear(n, n2),
             nn.ReLU(),
-            nn.Linear(n2, 2),
-            # nn.ReLU(),
-            # nn.Linear(n4, 2),
+            nn.Linear(n2, N_ACTIONS)
         )
+        # 2D
+        self.network2d = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(GAME_SIZE ** 2, GAME_SIZE * 2),
+            nn.ReLU(),
+            nn.Linear(GAME_SIZE * 2, GAME_SIZE),
+            nn.ReLU(),
+            nn.Linear(GAME_SIZE, N_ACTIONS)
+        )
+        self.output = nn.Softmax(dim=0)
 
     def forward(self, x):
-        return torch.sigmoid(self.network(x))
+        if GAME_DIMENSIONS == 1:
+            if USE_CONVOLUTIONAL_LAYER:
+                x = x.unsqueeze(1)
+                x = self.conv1d(x)
+                x = torch.flatten(x, start_dim=1)
+            return torch.sigmoid(self.network(x))
+        else:
+            return torch.sigmoid(self.network2d(x))
 
 
 screen = pygame.display.set_mode(SCREEN_DIMENSION)
@@ -79,29 +101,34 @@ class Environment:
                     break
         else:
             self.grid = np.zeros((n, n))
-            self.objective = (randint(0, n - 1), randint(0, n - 1))
+            self.objective = [randint(0, n - 1), randint(0, n - 1)]
             while True:
-                agent_position = (randint(0, n - 1), randint(0, n - 1))
+                agent_position = [randint(0, n - 1), randint(0, n - 1)]
                 if agent_position != self.objective:
                     self.agent_position = agent_position
                     break
 
     def observe(self):
-        for i in range(self.n):
-            if i == self.agent_position:
-                self.grid[i] = 0.5
-            elif i == self.objective:
-                self.grid[i] = 1.0
-            else:
-                self.grid[i] = 0.0
+        if self.dimension == 1:
+            for i in range(self.n):
+                if i == self.agent_position:
+                    self.grid[i] = 0.5
+                elif i == self.objective:
+                    self.grid[i] = 1.0
+                else:
+                    self.grid[i] = 0.0
+        else:
+            self.grid = np.zeros((self.n, self.n))
+            self.grid[self.agent_position[0], self.agent_position[1]] = 0.5
+            self.grid[self.objective[0], self.objective[1]] = 1.0
         return self.grid.copy()
 
     def render(self, screen):
         normal = (255, 255, 255)
         agent = (255, 0, 0)
         target = (0, 255, 0)
+        s = 8
         if self.dimension == 1:
-            s = 8
             for i in range(self.n):
                 square = pygame.Rect((s + 1) * (i + 1), s, s, s)
                 if i == self.objective:
@@ -110,18 +137,55 @@ class Environment:
                     pygame.draw.rect(screen, agent, square)
                 else:
                     pygame.draw.rect(screen, normal, square)
+        else:
+            for i in range(self.n):
+                for j in range(self.n):
+                    square = pygame.Rect((s + 1) * (i + 1), (s + 1) * (j + 1), s, s)
+                    if [i, j] == self.objective:
+                        pygame.draw.rect(screen, target, square)
+                    elif [i, j] == self.agent_position:
+                        pygame.draw.rect(screen, agent, square)
+                    else:
+                        pygame.draw.rect(screen, normal, square)
 
     def update(self, action: list[int]) -> tuple:
-        distance1 = abs(self.agent_position - self.objective)
-        if action[0] == 1:
-            self.agent_position -= 1
-            if self.agent_position < 0:
-                self.agent_position = 0
-        if action[1] == 1:
-            self.agent_position += 1
-            if self.agent_position > self.n - 1:
-                self.agent_position = self.n - 1
-        distance2 = abs(self.agent_position - self.objective)
+        oob_penalty = 0
+        if self.dimension == 1:
+            distance1 = abs(self.agent_position - self.objective)
+            if action[0] == 1:
+                self.agent_position -= 1
+                if self.agent_position < 0:
+                    self.agent_position = 0
+                    oob_penalty = 1
+            elif action[1] == 1:
+                self.agent_position += 1
+                if self.agent_position > self.n - 1:
+                    self.agent_position = self.n - 1
+                    oob_penalty = 1
+            distance2 = abs(self.agent_position - self.objective)
+        else:
+            distance1 = abs(self.agent_position[0] - self.objective[0]) + abs(self.agent_position[1] - self.objective[1])
+            if action[0] == 1:
+                self.agent_position[0] -= 1
+                if self.agent_position[0] < 0:
+                    self.agent_position[0] = 0
+                    oob_penalty = 1
+            elif action[1] == 1:
+                self.agent_position[0] += 1
+                if self.agent_position[0] > self.n - 1:
+                    self.agent_position[0] = self.n - 1
+                    oob_penalty = 1
+            elif action[2] == 1:
+                self.agent_position[1] -= 1
+                if self.agent_position[1] < 0:
+                    self.agent_position[1] = 0
+                    oob_penalty = 1
+            elif action[3] == 1:
+                self.agent_position[1] += 1
+                if self.agent_position[1] > self.n - 1:
+                    self.agent_position[1] = self.n - 1
+                    oob_penalty = 1
+            distance2 = abs(self.agent_position[0] - self.objective[0]) + abs(self.agent_position[1] - self.objective[1])
         done = self.agent_position == self.objective
         travel = distance1 - distance2
         if travel == 0:
@@ -132,6 +196,7 @@ class Environment:
             reward = REWARDS["move away from objective"]
         if done:
             reward = REWARDS["reach objective"]
+        reward += REWARDS["out of bound penalty"] * oob_penalty
         return reward, done
 
 
@@ -146,15 +211,13 @@ memory = deque(maxlen=MEMORY_SIZE)
 
 def select_action(state, epsilon):
     if random() < epsilon:
-        return (randint(0, 1), randint(0, 1))
+        action = [0 for _ in range(N_ACTIONS)]
+        action[randint(0, len(action) - 1)] = 1
+        return action
     else:
-        state = torch.FloatTensor(np.stack(state, axis=0)).to("cuda")
-        Q = policy_net(state).tolist()
-        return [1 if q > 0.5 else 0 for q in Q]
-        # if Q[0] > Q[1]:
-        #     return [1, 0]
-        # else:
-        #     return [0, 1]
+        state = torch.FloatTensor(np.stack(np.array([state]), axis=0)).to("cuda")
+        Q = policy_net(state)[0].tolist()
+        return [1 if q == max(Q) else 0 for q in Q]
 
 
 def optimize_model():
@@ -173,6 +236,7 @@ def optimize_model():
     # Compute Q-values for current states
     q_values = policy_net(state_batch)
     q_values = action_batch * q_values
+    # print("Q: " + str(q_values[0]))
     q_values = torch.sum(q_values, dim=1)
 
     # Compute target Q-values using the target network
@@ -187,7 +251,7 @@ def optimize_model():
     # print("D: " + str(done_batch[0]))
     # print("M: " + str(max_next_q_values[0]))
     # print("T: " + str(target_q_values[0]))
-    # print("Q: " + str(q_values[0]))
+    # exit()
 
     loss = nn.MSELoss()(q_values, target_q_values)
 
@@ -196,8 +260,9 @@ def optimize_model():
     optimizer.step()
 
 
-def evaluate():
+def evaluate(slow_down = False):
     print("EVALUATING")
+    exit_loop = False
     durations = []
     for _ in range(100):
         env = Environment(GAME_SIZE, GAME_DIMENSIONS)
@@ -205,11 +270,9 @@ def evaluate():
             # Act
             state = env.observe()
             action = select_action(state, 0.0)
-            state = torch.FloatTensor(np.stack(state, axis=0)).to("cuda")
-            Q = target_net(state).tolist()
-
-            action = [1 if q > 0.5 else 0 for q in Q]
-
+            state = torch.FloatTensor(np.stack(np.array([state]), axis=0)).to("cuda")
+            Q = target_net(state)[0].tolist()
+            action = [1 if q == max(Q) else 0 for q in Q]
             _, done = env.update(action)
             # Display
             screen.fill((0, 0, 0))
@@ -217,11 +280,14 @@ def evaluate():
             pygame.display.update()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                    exit()
+                    exit_loop = True
             if done:
                 break
+            if slow_down:
+                sleep(0.01)
         durations.append(step + 1)
+        if exit_loop:
+            break
 
     avg = sum(durations) / len(durations)
     print(f"Average: {avg}")
@@ -233,6 +299,7 @@ def evaluate():
 print()
 steps_done = 0
 averages = []
+exit_loop = False
 for episode in range(N_EPISODES):
     epsilon = 1.05 - (episode / N_EPISODES)
     env = Environment(GAME_SIZE, GAME_DIMENSIONS)
@@ -256,15 +323,18 @@ for episode in range(N_EPISODES):
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                pygame.quit()
-                exit()
-        if done:
+                exit_loop = True
+        if done or exit_loop:
             break
     print(f"\033[FEpisode {episode} finished after {step} steps. {steps_done} steps in total.")
+    if exit_loop:
+        break
 
+evaluate(True)
 
 fig, ax = plt.subplots()
 ax.plot(list(range(len(averages))), averages)
 ax.set(xlabel='episode', ylabel='n steps')
 ax.grid()
 plt.show()
+pygame.quit()
