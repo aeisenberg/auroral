@@ -9,6 +9,9 @@ import torch.optim as optim
 from torchvision.transforms import Resize
 
 
+N_ACTIONS = 5
+
+
 class ReplayMemory:
     def __init__(self, capacity):
         self.memory = deque(maxlen=capacity)
@@ -51,13 +54,14 @@ class DQN():
             np.ndarray: A binary vector of size 5 indicating the chosen actions.
         """
         if random() < self.epsilon:
-            return [randint(0, 1) for _ in range(5)]
+            action = [0 for _ in range(N_ACTIONS)]
+            action[randint(0, len(action) - 1)] = 1
+            return action
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).permute(2, 0, 1).unsqueeze(0).to(self.device)
                 q_values = self.policy_net(state).tolist()[0]
-                return [1 if q > 0.5 else 0 for q in q_values]
-                # return [1 if q == max(q_values) else 0 for q in q_values]
+                return [1 if q == max(q_values) else 0 for q in q_values]
 
     def prediction(self, state: np.ndarray):
         """

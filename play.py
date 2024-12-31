@@ -14,6 +14,7 @@ File information:
 """
 
 import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 import argparse
 from time import sleep
@@ -52,7 +53,7 @@ if s < 256:
 SCREEN_DIMENSIONS = (s, s) if s else (256, 256)
 
 pygame.init()
-pygame.display.set_caption("Auroral")
+pygame.display.set_caption("Auroral - Game")
 screen = pygame.display.set_mode(SCREEN_DIMENSIONS)
 
 ALL_LEVELS = [f for f in os.listdir("assets/levels") if f.endswith(".json")]
@@ -62,8 +63,8 @@ ALL_THEMES = [f for f in os.listdir("assets/themes") if f.isnumeric()]
 def menu(level: int, theme: int) -> int:
     pygame.font.init()
     focus = 0
-    instruction_font = pygame.font.SysFont('Comic Sans MS', 14)
-    font = pygame.font.SysFont('Comic Sans MS', 24)
+    instruction_font = pygame.font.SysFont('Liberation Mono', 14)
+    font = pygame.font.SysFont('Liberation Mono', 24)
     stop = False
 
     def render(f, text, y):
@@ -126,7 +127,7 @@ def menu(level: int, theme: int) -> int:
 
 
 def display_score(screen, score: tuple[int]) -> None:
-    font = pygame.font.SysFont('Comic Sans MS', 24)
+    font = pygame.font.SysFont('Liberation Mono', 24)
     w, h = screen.get_width(), screen.get_height()
     if score is None:
         screen.fill((155, 0, 0))

@@ -15,6 +15,8 @@ File information:
 """
 
 import numpy as np
+import os
+os.environ['PYGAME_HIDE_SUPPORT_PROMPT'] = "hide"
 import pygame
 from time import sleep
 from random import randint, random, sample
@@ -138,7 +140,7 @@ class DQN(nn.Module):
 # ENVIRONMENT
 screen = pygame.display.set_mode(SCREEN_DIMENSION)
 pygame.init()
-pygame.display.set_caption("Auroral")
+pygame.display.set_caption("Auroral - Test")
 
 
 class Environment:

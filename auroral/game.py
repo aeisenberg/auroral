@@ -46,7 +46,7 @@ def play(
     direction = Vector(0.0, 0.0)
     if debug:
         pygame.font.init()
-        font = pygame.font.SysFont('Comic Sans MS', 24)
+        font = pygame.font.SysFont('Liberation Mono', 24)
         delta_buffer = deque(maxlen=500)
 
     while True:
@@ -131,7 +131,6 @@ def frame(
         of the frame (after completing its action) and `is_terminal_state` is
         `True` is the game is completed and `False` if not.
     """
-    # Perform the action.
     player = env.get_player()
     direction = Vector(0.0, 0.0)
     action = {
@@ -155,11 +154,4 @@ def frame(
     player.direction.normalize()
     player.direction.rotate(-45)
     reward, done = env.update(delta)
-
-    # Penalize inconducive inputs.
-    # if action["up"] and action["down"]:
-    #     reward -= 1.0
-    # if action["left"] and action["right"]:
-    #     reward -= 1.0
-
     return reward, done
