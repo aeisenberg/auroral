@@ -346,7 +346,8 @@ class Environment:
             reward -= 0.1
         if final_hp < original_hp:
             reward -= 0.1
-        return reward, self.is_end_state()
+        lost = self.player.health_points <= 0.0
+        return reward, self.is_end_state(), lost
 
     def get_distance_to_closets_point(self) -> float:
         d = float("inf")

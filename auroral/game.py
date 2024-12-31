@@ -153,5 +153,5 @@ def frame(
     player.direction = direction.copy()
     player.direction.normalize()
     player.direction.rotate(-45)
-    reward, done = env.update(delta)
-    return reward, done
+    reward, done, lost = env.update(delta)
+    return reward, done, lost

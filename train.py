@@ -159,32 +159,6 @@ def update_screen(screen: pygame.Surface, theme: dict) -> None:
     )
 
 
-def display_debug_information(
-        meta_screen,
-        episode,
-        step,
-        delta,
-        reward,
-        cumulative_reward,
-        epsilon,
-        state
-    ):
-    meta_screen.fill((0, 0, 0))
-    meta_screen.blit(screen, (32, 32))
-    display_info(f"Game footage", x=32, y=0)
-    display_info(f"DQN Input", x=32, y=320)
-    display_info(f"Episode: {episode + 1}    Step: {step + 1}", line=0)
-    display_info(f"Delta = {delta:.4} s", line=1)
-    display_info(f"Reward = {reward:.4}", line=2)
-    display_info(f"Cumulative reward = {cumulative_reward:.4}", line=3)
-    display_info(f"ϵ = {epsilon:.4}", line=4)
-    model_input = (state * 255.0).astype(int)
-    if configuration["n_channels"] == 1:
-        model_input = model_input.squeeze()
-    model_input = pygame.surfarray.make_surface(model_input)
-    meta_screen.blit(model_input, (32, 352))
-
-
 def display_info(text, line = None, x = None, y = None) -> None:
     """Display debugging information on the meta screen.
 
@@ -225,6 +199,52 @@ def create_level(configuration: dict, resources: dict) -> tuple:
     return environment.Environment(level), theme
 
 
+def display_debug(
+        meta_screen,
+        episode,
+        step,
+        delta,
+        reward,
+        cumulative_reward,
+        epsilon,
+        state,
+        evaluations,
+        is_evaluating = False
+    ):
+    meta_screen.fill((0, 0, 0))
+    meta_screen.blit(screen, (32, 32))
+    display_info(f"Game footage", x=32, y=0)
+    display_info(f"DQN Input", x=32, y=320)
+    display_info(f"Episode: {episode + 1}    Step: {step + 1}", line=0)
+    display_info(f"Delta = {delta:.4} s", line=1)
+    display_info(f"Reward = {reward:.4}", line=2)
+    display_info(f"Cumulative reward = {cumulative_reward:.4}", line=3)
+    display_info(f"ϵ = {epsilon:.4}", line=4)
+    if evaluations:
+        if is_evaluating:
+            display_info(f"EVALUATING", line=8)
+        else:
+            display_info(f"Last evaluation", line=8)
+        display_info(f"N successes: {evaluations[-1]['successes']}", line=9)
+        display_info(f"N timeout: {evaluations[-1]['timeout']}", line=10)
+        display_info(f"N failures: {evaluations[-1]['failures']}", line=11)
+        n_steps = evaluations[-1]['average_n_steps']
+        if n_steps > 0:
+            display_info(f"N steps: {n_steps}", line=12)
+        else:
+            display_info(f"N steps: N/A", line=12)
+    else:
+        display_info("The model has not been", line=8)
+        display_info("evaluated yet.", line=9)
+    model_input = (state * 255.0).astype(int)
+    if configuration["n_channels"] == 1:
+        model_input = model_input.squeeze()
+    else:
+        model_input = model_input.transpose(1, 2, 0)
+    model_input = pygame.surfarray.make_surface(model_input)
+    meta_screen.blit(model_input, (32, 352))
+
+
 def prepare_frame(frame: np.ndarray, configuration: dict) -> np.ndarray:
     """Convert a raw RGB game frame to the format expected by the network."""
     n = configuration["frame_size"]
@@ -244,6 +264,7 @@ def print_progress(
         episode: int,
         n_episodes: int,
         step: int,
+        n_steps: int,
         t0,
         episode_start_time,
         training_start_time,
@@ -251,14 +272,14 @@ def print_progress(
     ) -> None:
     """Print a message on each training iteration in the terminal."""
     if is_evaluating:
-        print(f"\033[FEpisode: {episode + 1} / {n_episodes}. EVALUATING "
-            + f"Step: {step + 1} / {N_STEPS}"
+        print(f"\033[FEVALUATING. Episode: {episode + 1} / {n_episodes}. "
+            + f"Step: {step + 1} / {n_steps}"
             + f"    Episode duration (s): {(t0 - episode_start_time):.4}"
             + f"    Training duration (s): {(t0 - training_start_time):.4}"
         )
     else:
-        print(f"\033[FEpisode: {episode + 1} / {n_episodes}. TRAINING "
-            + f"Step: {step + 1} / {N_STEPS}"
+        print(f"\033[FTRAINING. Episode: {episode + 1} / {n_episodes}. "
+            + f"Step: {step + 1} / {n_steps}"
             + f"    Episode duration (s): {(t0 - episode_start_time):.4}"
             + f"    Training duration (s): {(t0 - training_start_time):.4}"
         )
@@ -273,6 +294,61 @@ def observe(
     return prepare_frame(array, configuration)
 
 
+def evaluate(screen, model, configuration, evaluations, meta_screen):
+    episodes = configuration["evaluation_n_episodes"]
+    steps = configuration["evaluation_n_steps"]
+    successes = []
+    evaluations.append(
+        {
+            "total": episodes,
+            "successes": 0,
+            "timeout": 0,
+            "failures": 0,
+            "average_n_steps": -1
+        }
+    )
+    for episode in range(episodes):
+        env, theme = create_level(configuration, resources)
+        for step in range(steps):
+            print_progress(episode, N_EPISODES, step + 1, t0, episode_start_time,
+                           training_start_time, True)
+            # Act
+            state = observe(screen, configuration, theme)
+            action = model.act(state, 0.0)
+            reward, done, lost = game.frame(env, DELTA, action)
+            if done and not lost:
+                successes.append(step + 1)
+            delta = t1 - t0
+            if not configuration["no_graphics"]:
+                if configuration["debug"]:
+                    display_debug(meta_screen, episode, step, delta, reward,
+                                  cumulative_reward, 0.0, state,
+                                  evaluations, True)
+                else:
+                    meta_screen.blit(screen, (0, 0))
+                pygame.display.update()
+                # Terminate the program when closing the window.
+                for event in pygame.event.get():
+                    if event.type == pygame.QUIT:
+                        pygame.quit()
+                        exit()
+            if done:
+                break
+            if configuration["slow"] and delta < DELTA:
+                sleep(DELTA - delta)
+        if lost:
+            evaluations[-1]["failures"] += 1
+        elif step + 1 >= steps:
+            evaluations[-1]["timeout"] += 1
+        else:
+            evaluations[-1]["successes"] += 1
+            successes.append(step + 1)
+        if successes:
+            evaluations["average_n_steps"] = sum(successes) / len(successes)
+        else:
+            evaluations["average_n_steps"] = -1
+
+
 configuration = configure()
 screen, meta_screen, font = prepare_game(configuration)
 resources = load_resources(configuration)
@@ -282,53 +358,37 @@ model = create_DQN(configuration)
 n_parameters = sum(p.numel() for p in model.policy_net.parameters())
 print(f"Number of parameters: {n_parameters}")
 
-
-def evaluate():
-    pass
-
-
 # Training loop.
 N_EPISODES = configuration["n_episodes"]
-N_STEPS = configuration["maximum_n_steps"]
-INITIAL_EPSILON = 1.0
+N_STEPS = configuration["n_steps"]
+INITIAL_EPSILON = configuration["initial_epsilon"]
+FINAL_EPSILON = configuration["final_epsilon"]
 training_start_time = time()
-evaluation_n_steps = []
+evaluations = []
 
 for episode in range(N_EPISODES):
+    print()  # Print the output of each episode on a distinct line.
+    if (episode + 1) % configuration["evaluation_frequency"] == 0:
+        evaluate(screen, model, configuration, evaluations, meta_screen)
     epsilon = (1.0 - (episode / N_EPISODES) ) * INITIAL_EPSILON
-    is_evaluating = (episode + 1) % configuration["evaluation_frequency"] == 0
-    if is_evaluating:
-        epsilon = 0.0
-        evaluation_n_steps.append([])
     env, theme = create_level(configuration, resources)
     cumulative_reward = 0.0
     episode_start_time = time()
     for step in range(N_STEPS):
         t0 = time()
-        print_progress(episode, N_EPISODES, step + 1, t0, episode_start_time,
-                       training_start_time, is_evaluating)
-        # Act
+        print_progress(episode, N_EPISODES, step + 1, N_STEPS, t0,
+                       episode_start_time, training_start_time, False)
         state = observe(screen, configuration, theme)
         action = model.act(state, epsilon)
-        reward, done = game.frame(env, DELTA, action)
+        reward, done, _ = game.frame(env, DELTA, action)
         next_state = observe(screen, configuration, theme)
-        # Train or evaluate
-        if not is_evaluating:
-            model.step(state, action, reward, next_state, done)
+        model.step(state, action, reward, next_state, done)
         t1 = time()
         delta = t1 - t0
         if not configuration["no_graphics"]:
             if configuration["debug"]:
-                display_debug_information(
-                    meta_screen,
-                    episode,
-                    step,
-                    delta,
-                    reward,
-                    cumulative_reward,
-                    epsilon,
-                    state
-                )
+                display_debug(meta_screen, episode, step, delta, reward,
+                              cumulative_reward, epsilon, state, evaluations)
             else:
                 meta_screen.blit(screen, (0, 0))
             pygame.display.update()
