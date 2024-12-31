@@ -5,11 +5,13 @@
     "maximum_n_steps": 200,
     "framerate": 24,
     "n_frames": 4,
-    "input_size": 84,
+    "frame_size": 84,
     "n_channels": 1,
     "memory_buffer_size": 1000,
+    "learning_rate": 1e-4,
+    "batch_size": 32,
+    "target_update_frequency": 1000,
     "evaluation_frequency": 25,
-    "learning_rate": 1e-3,
     "levels": [
         {
             "frequency": 1.0,

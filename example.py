@@ -6,7 +6,7 @@ Configure the section labelled "PARAMETERS" to modify the test.
 
 Usage:
 
-$ python3 test.py
+$ python3 example.py
 
 File information:
     - Author: Vincent Therrien (therrien.vincent.2@courrier.uqam.ca)

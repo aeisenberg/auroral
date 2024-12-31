@@ -18,7 +18,7 @@ RED = (255, 0, 0)
 BLACK = (0, 0, 0)
 
 
-def load_resources(directory: str, config_file: str, theme: str):
+def load_resources(directory: str, config_file: str, theme: str) -> dict:
     theme_directory = directory + "themes/" + theme + "/"
     images = {
         "tilemap": pygame.image.load(theme_directory + 'tilemap.png'),

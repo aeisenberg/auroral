@@ -12,48 +12,43 @@ from torchvision.transforms import Resize
 N_ACTIONS = 5
 
 
-class ReplayMemory:
-    def __init__(self, capacity):
-        self.memory = deque(maxlen=capacity)
-
-    def push(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
-
-    def sample(self, batch_size):
-        return sample(self.memory, batch_size)
-
-    def __len__(self):
-        return len(self.memory)
-
-
 class DQN():
 
-    def __init__(self, dqn, target_dqn):
-        self.device = "cuda"
-        self.policy_net = dqn.to(self.device)
-        self.target_net = target_dqn.to(self.device)
+    def __init__(
+            self,
+            network: nn.Module,
+            device: str,
+            frame_size: int,
+            n_frames: int,
+            learning_rate: float,
+            batch_size: int,
+            target_update_frequency: int
+        ):
+        self.device = device
+        self.policy_net = network(frame_size, n_frames).to(self.device)
+        self.target_net = network(frame_size, n_frames).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
-        self.memory = ReplayMemory(1000)
-        self.optimizer = optim.Adam(self.policy_net.parameters(), lr=1e-8)
-        self.epsilon = 1.0
-        self.batch_size = 32
+        self.memory = deque(maxlen=1000)
+        self.optimizer = optim.Adam(
+            self.policy_net.parameters(),
+            lr=learning_rate
+        )
+        self.batch_size = batch_size
         self.gamma = 0.99
         self.step_count = 0
-        self.target_update_frequency = 1000
+        self.target_update_frequency = target_update_frequency
 
-    def prepare_episode(self, epsilon) -> None:
-        self.epsilon = epsilon
-
-    def act(self, state: np.ndarray):
+    def act(self, state: np.ndarray, epsilon: float):
         """
         Produces an action based on the game frame.
         Args:
-            state (np.ndarray): The game state as a (256, 256, 3) RGB image.
+            state: The game state as a (256, 256, 3) RGB image.
+            epsilon: Probability of choosing a random action.
         Returns:
             np.ndarray: A binary vector of size 5 indicating the chosen actions.
         """
-        if random() < self.epsilon:
+        if random() < epsilon:
             action = [0 for _ in range(N_ACTIONS)]
             action[randint(0, len(action) - 1)] = 1
             return action
@@ -101,26 +96,31 @@ class DQN():
         """
         self.policy_net.train()
         self.step_count += 1
-        self.memory.push(state, action, reward, next_state, done)
+        self.memory.append((state, action, reward, next_state, done))
         if len(self.memory) < self.batch_size:
             return
 
         # Sample from replay memory
-        transitions = self.memory.sample(self.batch_size)
-        batch = list(zip(*transitions))
-        states = torch.stack([torch.FloatTensor(s).permute(2, 0, 1) for s in batch[0]]).to(self.device)
-        actions = torch.FloatTensor(batch[1]).to(self.device)
-        rewards = torch.FloatTensor(batch[2]).unsqueeze(1).to(self.device)
-        next_states = torch.stack([torch.FloatTensor(s).permute(2, 0, 1) for s in batch[0]]).to(self.device)
-        dones = torch.FloatTensor(batch[4]).unsqueeze(1).to(self.device)
+        batch = sample(self.memory, self.batch_size)
+        state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
+        state_batch = torch.FloatTensor(np.stack(state_batch, axis=0)).to(self.device)
+        action_batch = torch.LongTensor(np.stack(action_batch, axis=0)).to(self.device)
+        reward_batch = torch.FloatTensor(np.stack(reward_batch, axis=0)).to(self.device)
+        next_state_batch = torch.FloatTensor(np.stack(next_state_batch, axis=0)).to(self.device)
+        done_batch = torch.FloatTensor(np.stack(done_batch, axis=0)).to(self.device)
 
-        # Compute Q values and targets
-        q_values = self.policy_net(states) * actions
-        next_q_values = self.target_net(next_states).max(1)[0].detach().unsqueeze(1)
-        targets = rewards + self.gamma * next_q_values * (1 - dones)
+        # Compute Q-values for current states
+        q_values = self.policy_net(state_batch)
+        q_values = action_batch * q_values
+        q_values = torch.sum(q_values, dim=1)
+
+        # Compute target Q-values using the target network
+        with torch.no_grad():
+            max_next_q_values = self.target_net(next_state_batch).max(dim=1)[0]
+            target_q_values = reward_batch + self.gamma * max_next_q_values * (1 - done_batch)
 
         # Compute loss
-        loss = nn.MSELoss()(q_values, targets * actions)
+        loss = nn.MSELoss()(q_values, target_q_values)
 
         # Optimize
         self.optimizer.zero_grad()
@@ -135,7 +135,7 @@ class DQN():
 class DQN_1_shallow(nn.Module):
     """Single-frame deep Q network."""
 
-    def __init__(self):
+    def __init__(self, frame_size: int, n_frames: int):
         super(DQN_1_shallow, self).__init__()
         self.conv1 = nn.Conv2d(3, 32, kernel_size=8, stride=4)  # Output: [32, 63, 63]
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)  # Output: [32, 31, 31]
@@ -161,7 +161,7 @@ class DQN_1_shallow(nn.Module):
 class DQN_1_mid(nn.Module):
     """Deep Q network."""
 
-    def __init__(self):
+    def __init__(self, frame_size: int, n_frames: int):
         super(DQN_1_mid, self).__init__()
         self.network = nn.Sequential(
             nn.Conv2d(3, 32, kernel_size=8, stride=4),
