@@ -38,7 +38,7 @@ def play(
     try:
         tilemap = environment.load(level_file)
     except:
-        tilemap = environment.generate_level(10)
+        tilemap = environment.generate_level(20)
     env = environment.Environment(tilemap)
     player = env.get_player()
     resources = render.load_resources("assets/", MATCHES_FILE, theme)
@@ -82,7 +82,7 @@ def play(
         delta = now - ti
         ti = now
         # Update the game.
-        _, is_over = env.update(delta)
+        _, is_over, _ = env.update(delta)
         if is_over:
             return env.get_score()
         # Render on the surface.

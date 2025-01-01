@@ -12,5 +12,5 @@ Test index:
 6. 10 X 10. Collect three points
 7. 10 X 10. Avoid an enemy
 8. 10 X 10. Walk around lava
-9. 10 X 10. Integrative level. Combines bushes, a key, walls, multiple coins, an enemy, and lava.
-10. 20 X 20. Integrative level. Combines bushes, a key, walls, multiple coins, an enemy, and lava.
+9. 10 X 10. Integrative level. Combines bushes, a key, walls, multiple coins, and lava.
+10. 20 X 20. Integrative level. Combines bushes, a key, walls, multiple coins, enemies, and lava.

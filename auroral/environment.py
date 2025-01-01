@@ -9,7 +9,7 @@ File information:
 
 import json
 import numpy as np
-from random import uniform, choice, randint
+from random import uniform, choice, randint, random
 from math import atan, pi, sin, cos
 
 
@@ -30,13 +30,13 @@ def load(level_filename: str) -> tuple:
 
 def generate_level(
         n: int,
-        points: int | tuple[int] = (1, 3),
-        walls: int | tuple[int] = (4, 8),
-        water: int | tuple[int] = (0, 5),
-        trees: int | tuple[int] = (0, 3),
-        doors: int | tuple[int] = (0, 1),
-        enemies: int | tuple[int] = (0, 1),
-        danger: int | tuple[int] = (0, 2)
+        points: int | tuple[int] = (2, 5),
+        walls: int | tuple[int] = (10, 30),
+        water: int | tuple[int] = (0, 30),
+        trees: int | tuple[int] = (0, 30),
+        doors: int | tuple[int] = (0, 5),
+        enemies: int | tuple[int] = (0, 5),
+        danger: int | tuple[int] = (0, 30)
         ) -> tuple:
     """Create a random environment.
 
@@ -80,11 +80,24 @@ def generate_level(
                 break
 
     def add_element(c: str, a: int, b: int):
-        for _ in range(randint(a, b)):
+        count = randint(a, b)
+        while count > 0:
             i, j = randint(1, n - 2), randint(1, n - 2)
             o = tilemap[i][j]
             if o == " ":
-                tilemap[i][j] = c
+                p = random()
+                try:
+                    if (tilemap[i - 1][j] == c
+                            or tilemap[i + 1][j] == c
+                            or tilemap[i][j - 1] == c
+                            or tilemap[i][j + 1] == c
+                        ):
+                        p *= 9
+                except:
+                    pass
+                if p > 0.9:
+                    tilemap[i][j] = c
+                    count -= 1
 
     add_element("d", doors[0], doors[1])
     add_element("k", doors[0], doors[1])
@@ -93,6 +106,16 @@ def generate_level(
     add_element("t", trees[0], trees[1])
     add_element("e", enemies[0], enemies[1])
     add_element("s", danger[0], danger[1])
+
+    # Swap floor and wall tiles to add more variety.
+    for row in range(len(tilemap)):
+        for col in range(len(tilemap)):
+            if tilemap[row][col] == " ":
+                if random() < 0.1:
+                    tilemap[row][col] = "-"
+                elif random() < 0.1:
+                    tilemap[row][col] = "1"
+
     return tilemap
 
 
@@ -194,10 +217,10 @@ class EnemyAgent(Agent):
     def change_direction(self):
         self.direction = choice(
             (
-                Vector(1.0, 0.0),
-                Vector(0.0, 1.0),
-                Vector(-1.0, 0.0),
-                Vector(0.0, -1.0)
+                Vector(1.0, 1.0),
+                Vector(1.0, -1.0),
+                Vector(-1.0, 1.0),
+                Vector(-1.0, -1.0)
             )
         )
 
@@ -260,8 +283,9 @@ class Animation:
         self.lifetime = 0.0
 
 
-TILES = (" ", "1", "2", "3", "w")
-OBJECTS = ("v", "h", "*", "k", "t", "d", "s")
+TILES = (" ", "1", "-", "2", "3", "4", "w", "s")
+OBJECTS = ("v", "h", "*", "k", "t", "d")
+NO_COLLISIONS = (" ", "1", "-", "s")
 
 
 class Environment:
@@ -302,8 +326,8 @@ class Environment:
         for i in range(len(self.tilemap)):
             for j in range(len(self.tilemap[0])):
                 # Normal tiles
-                if self.tilemap[i][j] in (' ', '0', '1'):
-                    if self.objects[i][j] in ("t", "d"):
+                if self.tilemap[i][j] in NO_COLLISIONS:
+                    if self.objects[i][j] in ("t", "d"):  # Obstacles
                         self.collisions[i][j] = 1
                     else:
                         self.collisions[i][j] = 0
@@ -400,7 +424,7 @@ class Environment:
         elif self.objects[y][x] == "k":
             self.get_player().n_keys += 1
             self.objects[y][x] = " "
-        elif self.objects[y][x] == "s":
+        elif self.tilemap[y][x] == "s":
             self.player.health_points -= delta * 0.4
 
     def update_animations(self, delta: float):
@@ -460,7 +484,7 @@ class Environment:
         for p in self.projectiles:
             p.update(delta)
             # Tilemap
-            row, col = int(p.position.y), int(p.position.x)
+            row, col = int(p.position.y + 0.5), int(p.position.x)
             if row >= 0 and row < len(self.collisions) and col >= 0 and col < len(self.collisions[0]):
                 if self.collisions[row][col] >= 2:
                     p.explode()

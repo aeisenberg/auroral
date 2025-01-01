@@ -153,7 +153,7 @@ def update_screen(
         theme: dict
     ) -> None:
     """Update the game screen used by the agent."""
-    screen.fill((50, 50, 50))
+    screen.fill((0, 0, 0))
     position = env.get_player().position
     render.isometric(
         env,
@@ -217,7 +217,7 @@ def display_debug(
         evaluations,
         is_evaluating = False
     ):
-    meta_screen.fill((0, 0, 0))
+    meta_screen.fill((20, 20, 20))
     meta_screen.blit(screen, (32, 32))
     display_info(f"Game footage", x=32, y=0)
     display_info(f"DQN Input", x=32, y=320)
