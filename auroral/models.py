@@ -20,13 +20,14 @@ class DQN():
             device: str,
             frame_size: int,
             n_frames: int,
+            n_channels: int,
             learning_rate: float,
             batch_size: int,
             target_update_frequency: int
         ):
         self.device = device
-        self.policy_net = network(frame_size, n_frames).to(self.device)
-        self.target_net = network(frame_size, n_frames).to(self.device)
+        self.policy_net = network(frame_size, n_frames, n_channels).to(self.device)
+        self.target_net = network(frame_size, n_frames, n_channels).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
         self.memory = deque(maxlen=1000)
@@ -54,23 +55,9 @@ class DQN():
             return action
         else:
             with torch.no_grad():
-                state = torch.FloatTensor(state).permute(2, 0, 1).unsqueeze(0).to(self.device)
+                state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
                 q_values = self.policy_net(state).tolist()[0]
                 return [1 if q == max(q_values) else 0 for q in q_values]
-
-    def prediction(self, state: np.ndarray):
-        """
-        Produces an action based on the game frame.
-        Args:
-            state (np.ndarray): The game state as a (256, 256, 3) RGB image.
-        Returns:
-            np.ndarray: A binary vector of size 5 indicating the chosen actions.
-        """
-        self.policy_net.eval()
-        with torch.no_grad():
-            state = torch.FloatTensor(state).permute(2, 0, 1).unsqueeze(0).to(self.device)
-            q_values = self.policy_net(state)
-            return q_values.float().squeeze(0).tolist()
 
     def save(self, filepath: str) -> None:
         torch.save(self.state_dict(), filepath)
@@ -81,17 +68,18 @@ class DQN():
     def step(
             self,
             state: np.ndarray,
-            action: dict,
+            action: list[int],
             reward: float,
             next_state: np.ndarray,
             done: bool) -> None:
         """
         Performs a single training step.
+
         Args:
-            state (np.ndarray): Current state as a (256, 256, 3) RGB image.
-            action (dict): Dictionary of actions taken, mapping indices to binary values.
+            state (np.ndarray): Current state oof the environment (1 frame).
+            action (list): Binary vector of the action taken.
             reward (float): Reward received after taking the action.
-            next_state (np.ndarray): Next state as a (256, 256, 3) RGB image.
+            next_state (np.ndarray): Next state (1 frame)
             done (bool): Whether the episode is finished.
         """
         self.policy_net.train()
@@ -100,7 +88,7 @@ class DQN():
         if len(self.memory) < self.batch_size:
             return
 
-        # Sample from replay memory
+        # Sample from memory
         batch = sample(self.memory, self.batch_size)
         state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
         state_batch = torch.FloatTensor(np.stack(state_batch, axis=0)).to(self.device)
@@ -133,26 +121,38 @@ class DQN():
 
 
 class DQN_1_shallow(nn.Module):
-    """Single-frame deep Q network."""
+    """Single-frame deep Q network.
 
-    def __init__(self, frame_size: int, n_frames: int):
+    Expected shape of the input: [batch_size, n_channels * n_frames, n, n],
+    where n is the size of the image.
+    """
+
+    def __init__(self, frame_size: int, n_frames: int, n_channels: int):
+        """
+        Args:
+            frame_size: Dimension of the input image.
+            n_frames: Number of images in the input.
+            n_channels: Number of channels in the input - either 1 or 3.
+        """
         super(DQN_1_shallow, self).__init__()
-        self.conv1 = nn.Conv2d(3, 32, kernel_size=8, stride=4)  # Output: [32, 63, 63]
-        self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)  # Output: [32, 31, 31]
-        self.fc1 = nn.Linear(32 * 31 * 31, 512)  # Flatten and connect to 512 neurons
-        self.fc2 = nn.Linear(512, 5)  # Output layer: 5 Q-values for the 5 actions
-        self.sigmoid = nn.Sigmoid()  # Sigmoid activation for binary outputs
-
-        self.optimizer = optim.Adam(self.parameters(), lr=1e-8)
-        self.loss_fn = nn.CrossEntropyLoss()
-
-        self.GAMMA = 0.99
+        self.conv = nn.Conv2d(
+            in_channels=n_frames * n_channels,
+            out_channels=32,  # Number of filters in the first layer
+            kernel_size=8,    # Size of the convolutional kernel
+            stride=4,         # Stride for downsampling
+            padding=0         # No padding
+        )
+        output_size = int((frame_size - 8) / 4 + 1)
+        self.fc1 = nn.Linear(32 * output_size * output_size, 512)
+        self.fc2 = nn.Linear(512, N_ACTIONS)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = self.pool1(x)
-        x = x.view(x.size(0), -1)  # Batch size, Flattened features
-        x = F.relu(self.fc1(x))
+        x = self.conv(x)
+        x = F.relu(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc1(x)
+        x = F.relu(x)
         x = self.fc2(x)
         x = self.sigmoid(x)
         return x
@@ -175,8 +175,6 @@ class DQN_1_mid(nn.Module):
             nn.ReLU(),
             nn.Linear(512, 5),
         )
-        self.resizer = Resize((84, 84))
 
     def forward(self, x):
-        x = self.resizer(x)
         return torch.sigmoid(self.network(x))

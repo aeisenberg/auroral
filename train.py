@@ -19,6 +19,7 @@ import argparse
 from time import sleep, time
 import json
 from random import choices
+from collections import deque
 import numpy as np
 import torch
 from torchvision import transforms
@@ -139,13 +140,18 @@ def create_DQN(configuration: dict) -> models.DQN:
         configuration["device"],
         configuration["frame_size"],
         configuration["n_frames"],
+        configuration["n_channels"],
         configuration["learning_rate"],
         configuration["batch_size"],
         configuration["target_update_frequency"],
     )
 
 
-def update_screen(screen: pygame.Surface, theme: dict) -> None:
+def update_screen(
+        env: environment.Environment,
+        screen: pygame.Surface,
+        theme: dict
+    ) -> None:
     """Update the game screen used by the agent."""
     screen.fill((50, 50, 50))
     position = env.get_player().position
@@ -222,27 +228,31 @@ def display_debug(
     display_info(f"ϵ = {epsilon:.4}", line=4)
     if evaluations:
         if is_evaluating:
-            display_info(f"EVALUATING", line=8)
+            display_info(f"EVALUATING", line=6)
         else:
-            display_info(f"Last evaluation", line=8)
-        display_info(f"N successes: {evaluations[-1]['successes']}", line=9)
-        display_info(f"N timeout: {evaluations[-1]['timeout']}", line=10)
-        display_info(f"N failures: {evaluations[-1]['failures']}", line=11)
+            display_info(f"Last evaluation", line=6)
+        display_info(f"N success: {evaluations[-1]['success']}", line=7)
+        display_info(f"N timeout: {evaluations[-1]['timeout']}", line=8)
+        display_info(f"N failures: {evaluations[-1]['failures']}", line=9)
         n_steps = evaluations[-1]['average_n_steps']
         if n_steps > 0:
-            display_info(f"N steps: {n_steps}", line=12)
+            display_info(f"N steps: {n_steps:.4}", line=10)
         else:
-            display_info(f"N steps: N/A", line=12)
+            display_info(f"N steps: N/A", line=10)
     else:
-        display_info("The model has not been", line=8)
-        display_info("evaluated yet.", line=9)
-    model_input = (state * 255.0).astype(int)
-    if configuration["n_channels"] == 1:
-        model_input = model_input.squeeze()
-    else:
-        model_input = model_input.transpose(1, 2, 0)
-    model_input = pygame.surfarray.make_surface(model_input)
-    meta_screen.blit(model_input, (32, 352))
+        display_info("The model has not been", line=6)
+        display_info("evaluated yet.", line=7)
+    n = state.shape[-1]
+    images = torch.split(state, configuration["n_channels"], dim=0)
+    images = list(images)
+    images = [(image.numpy() * 255.0).astype(int) for image in images]
+    for i, image in enumerate(images):
+        if configuration["n_channels"] == 1:
+            model_input = image.squeeze()
+        else:
+            model_input = image.transpose(1, 2, 0)
+        model_input = pygame.surfarray.make_surface(model_input)
+        meta_screen.blit(model_input, (32 + (i * (n + 1)), 352))
 
 
 def prepare_frame(frame: np.ndarray, configuration: dict) -> np.ndarray:
@@ -265,43 +275,62 @@ def print_progress(
         n_episodes: int,
         step: int,
         n_steps: int,
-        t0,
-        episode_start_time,
-        training_start_time,
-        is_evaluating
+        t0 = None,
+        episode_start_time = None,
+        training_start_time = None,
+        is_evaluating=False
     ) -> None:
     """Print a message on each training iteration in the terminal."""
     if is_evaluating:
         print(f"\033[FEVALUATING. Episode: {episode + 1} / {n_episodes}. "
-            + f"Step: {step + 1} / {n_steps}"
-            + f"    Episode duration (s): {(t0 - episode_start_time):.4}"
-            + f"    Training duration (s): {(t0 - training_start_time):.4}"
+            + f"Step: {step} / {n_steps}"
         )
     else:
         print(f"\033[FTRAINING. Episode: {episode + 1} / {n_episodes}. "
-            + f"Step: {step + 1} / {n_steps}"
+            + f"Step: {step} / {n_steps}"
             + f"    Episode duration (s): {(t0 - episode_start_time):.4}"
             + f"    Training duration (s): {(t0 - training_start_time):.4}"
         )
 
 
 def observe(
-        screen: pygame.Surface, configuration: dict, theme: dict
-    ) -> np.ndarray:
+        env: environment.Environment,
+        screen: pygame.Surface,
+        configuration: dict,
+        theme: dict,
+        buffer: deque
+    ) -> torch.Tensor:
     """Observe the state of the environment."""
-    update_screen(screen, theme)
+    update_screen(env, screen, theme)
     array = pygame.surfarray.array3d(screen)
-    return prepare_frame(array, configuration)
+    array = prepare_frame(array, configuration)
+    tensor =  torch.Tensor(array)
+    buffer.append(tensor)
+    return torch.cat(tuple(buffer), dim=0)
+
+
+def create_buffer(
+        env: environment.Environment,
+        screen: pygame.Surface,
+        configuration: dict,
+        theme: dict,
+    ) -> deque:
+    """Initialize a frame buffer to store states."""
+    buffer = deque(maxlen=configuration["n_frames"])
+    for _ in range(configuration["n_frames"]):
+        observe(env, screen, configuration, theme, buffer)
+    return buffer
 
 
 def evaluate(screen, model, configuration, evaluations, meta_screen):
     episodes = configuration["evaluation_n_episodes"]
     steps = configuration["evaluation_n_steps"]
-    successes = []
+    DELTA = 1.0 / configuration["framerate"]
+    success = []
     evaluations.append(
         {
             "total": episodes,
-            "successes": 0,
+            "success": 0,
             "timeout": 0,
             "failures": 0,
             "average_n_steps": -1
@@ -309,21 +338,22 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
     )
     for episode in range(episodes):
         env, theme = create_level(configuration, resources)
+        buffer = create_buffer(env, screen, configuration, theme)
         for step in range(steps):
-            print_progress(episode, N_EPISODES, step + 1, t0, episode_start_time,
-                           training_start_time, True)
+            t0 = time()
+            print_progress(episode, N_EPISODES, step + 1, steps,
+                           is_evaluating = True)
             # Act
-            state = observe(screen, configuration, theme)
+            state = observe(env, screen, configuration, theme, buffer)
             action = model.act(state, 0.0)
             reward, done, lost = game.frame(env, DELTA, action)
             if done and not lost:
-                successes.append(step + 1)
-            delta = t1 - t0
+                success.append(step + 1)
+            delta = time() - t0
             if not configuration["no_graphics"]:
                 if configuration["debug"]:
                     display_debug(meta_screen, episode, step, delta, reward,
-                                  cumulative_reward, 0.0, state,
-                                  evaluations, True)
+                                  0.0, 0.0, state, evaluations, True)
                 else:
                     meta_screen.blit(screen, (0, 0))
                 pygame.display.update()
@@ -341,12 +371,12 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
         elif step + 1 >= steps:
             evaluations[-1]["timeout"] += 1
         else:
-            evaluations[-1]["successes"] += 1
-            successes.append(step + 1)
-        if successes:
-            evaluations["average_n_steps"] = sum(successes) / len(successes)
+            evaluations[-1]["success"] += 1
+            success.append(step + 1)
+        if success:
+            evaluations[-1]["average_n_steps"] = sum(success) / len(success)
         else:
-            evaluations["average_n_steps"] = -1
+            evaluations[-1]["average_n_steps"] = -1
 
 
 configuration = configure()
@@ -368,22 +398,24 @@ evaluations = []
 
 for episode in range(N_EPISODES):
     print()  # Print the output of each episode on a distinct line.
-    if (episode + 1) % configuration["evaluation_frequency"] == 0:
+    if episode % configuration["evaluation_frequency"] == 0:
         evaluate(screen, model, configuration, evaluations, meta_screen)
     epsilon = (1.0 - (episode / N_EPISODES) ) * INITIAL_EPSILON
     env, theme = create_level(configuration, resources)
+    buffer = create_buffer(env, screen, configuration, theme)
     cumulative_reward = 0.0
     episode_start_time = time()
     for step in range(N_STEPS):
         t0 = time()
         print_progress(episode, N_EPISODES, step + 1, N_STEPS, t0,
-                       episode_start_time, training_start_time, False)
-        state = observe(screen, configuration, theme)
+                       episode_start_time, training_start_time)
+        state = observe(env, screen, configuration, theme, buffer)
         action = model.act(state, epsilon)
         reward, done, _ = game.frame(env, DELTA, action)
-        next_state = observe(screen, configuration, theme)
+        next_state = observe(env, screen, configuration, theme, buffer)
         model.step(state, action, reward, next_state, done)
         t1 = time()
+        cumulative_reward += reward
         delta = t1 - t0
         if not configuration["no_graphics"]:
             if configuration["debug"]:
