@@ -75,7 +75,7 @@ def menu(level: int, theme: int) -> int:
         )
 
     while not stop:
-        screen.fill((50, 50, 50))
+        screen.fill((0, 0, 0))
         text = f"Move with the arrows or AWSD."
         render(instruction_font, text, 10)
         text = f"Begin the level with ENTER."

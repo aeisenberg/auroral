@@ -38,7 +38,7 @@ def play(
     try:
         tilemap = environment.load(level_file)
     except:
-        tilemap = environment.generate_level(20)
+        tilemap = environment.generate_level(16)
     env = environment.Environment(tilemap)
     player = env.get_player()
     resources = render.load_resources("assets/", MATCHES_FILE, theme)
@@ -86,7 +86,7 @@ def play(
         if is_over:
             return env.get_score()
         # Render on the surface.
-        screen.fill((50, 50, 50))
+        screen.fill((0, 0, 0))
         position = env.get_player().position
         render.isometric(
             env,

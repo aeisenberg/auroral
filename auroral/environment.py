@@ -33,10 +33,10 @@ def generate_level(
         points: int | tuple[int] = (2, 5),
         walls: int | tuple[int] = (10, 30),
         water: int | tuple[int] = (0, 30),
-        trees: int | tuple[int] = (0, 30),
+        trees: int | tuple[int] = (0, 20),
         doors: int | tuple[int] = (0, 5),
-        enemies: int | tuple[int] = (0, 5),
-        danger: int | tuple[int] = (0, 30)
+        enemies: int | tuple[int] = (0, 3),
+        danger: int | tuple[int] = (0, 15)
         ) -> tuple:
     """Create a random environment.
 
@@ -93,9 +93,11 @@ def generate_level(
                             or tilemap[i][j + 1] == c
                         ):
                         p *= 9
+                        if c in ("w", "-"):
+                            p *= 2
                 except:
                     pass
-                if p > 0.9:
+                if p > 0.95:
                     tilemap[i][j] = c
                     count -= 1
 
@@ -104,16 +106,16 @@ def generate_level(
     add_element("3", walls[0], walls[1])
     add_element("w", water[0], water[1])
     add_element("t", trees[0], trees[1])
+    add_element("b", int(trees[0] / 2), int(trees[1] / 2))
     add_element("e", enemies[0], enemies[1])
     add_element("s", danger[0], danger[1])
+    add_element("-", water[0], water[1])
 
     # Swap floor and wall tiles to add more variety.
     for row in range(len(tilemap)):
         for col in range(len(tilemap)):
             if tilemap[row][col] == " ":
-                if random() < 0.1:
-                    tilemap[row][col] = "-"
-                elif random() < 0.1:
+                if random() < 0.05:
                     tilemap[row][col] = "1"
 
     return tilemap
@@ -162,7 +164,7 @@ class Agent:
     def __init__(self, position):
         self.position = Vector(position[0], position[1])
         self.direction = Vector(0.0, 0.0)
-        self.front = Vector(0.0, 1.0)  # Faces South by default.
+        self.front = Vector(1.0, 1.0)  # Faces South by default.
         self.speed = 3.0
         self.s = 0.75
         self.offset = (1.0 - self.s) / 2.0
@@ -283,9 +285,9 @@ class Animation:
         self.lifetime = 0.0
 
 
-TILES = (" ", "1", "-", "2", "3", "4", "w", "s")
-OBJECTS = ("v", "h", "*", "k", "t", "d")
-NO_COLLISIONS = (" ", "1", "-", "s")
+TILES = (" ", "1", "-", "2", "3", "4", "w", "s", "_")
+OBJECTS = ("v", "h", "*", "k", "t", "d", "b")
+NO_COLLISIONS = (" ", "1", "-", "s", "_")
 
 
 class Environment:
@@ -311,8 +313,9 @@ class Environment:
                     self.tilemap[i][j] = " "
                 elif tilemap[i][j] == "e":
                     self.agents.append(("enemy", EnemyAgent((j, i))))
-                    self.tilemap[i][j] = " "
+                    self.tilemap[i][j] = "-"
                 elif tilemap[i][j] == "*":
+                    self.tilemap[i][j] = "-"
                     self.points.append((j, i))
         self.n_points = len(self.points)
         self.n_total_points = self.n_points
@@ -327,8 +330,9 @@ class Environment:
             for j in range(len(self.tilemap[0])):
                 # Normal tiles
                 if self.tilemap[i][j] in NO_COLLISIONS:
-                    if self.objects[i][j] in ("t", "d"):  # Obstacles
+                    if self.objects[i][j] in ("t", "d", "b"):  # Obstacles
                         self.collisions[i][j] = 1
+                        self.tilemap[i][j] = "-"
                     else:
                         self.collisions[i][j] = 0
                 elif self.tilemap[i][j] == 2:
@@ -486,14 +490,21 @@ class Environment:
             # Tilemap
             row, col = int(p.position.y + 0.5), int(p.position.x)
             if row >= 0 and row < len(self.collisions) and col >= 0 and col < len(self.collisions[0]):
-                if self.collisions[row][col] >= 2:
+                if self.collisions[row][col] >= 2 and self.tilemap[row][col] != "w":
                     p.explode()
-                if self.objects[row][col] == "t":
-                    p.explode()
-                    self.objects[row][col] = " "
-                    self.collisions[row][col] = 0
+            for i_offset, j_offset in ((0, 0), (-1, 0), (1, 0), (0, 1), (0, -1)):
+                row, col = int(p.position.y + 0.5) + i_offset, int(p.position.x) + j_offset
+                if row >= 0 and row < len(self.collisions) and col >= 0 and col < len(self.collisions[0]):
+                    if self.objects[row][col] in ("t", "b"):
+                        p.explode()
+                        if self.objects[row][col] == "t":
+                            self.tilemap[row][col] = " "
+                        else:
+                            self.tilemap[row][col] = "-"
+                        self.objects[row][col] = " "
+                        self.collisions[row][col] = 0
             # Agents
-            for name, agent in self.agents:
+            for _, agent in self.agents:
                 if (
                     abs(agent.position.x - p.position.x) < 0.5
                     and abs(agent.position.y - p.position.y) < 0.5
