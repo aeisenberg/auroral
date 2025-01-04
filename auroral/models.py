@@ -40,6 +40,9 @@ class DQN():
         self.step_count = 0
         self.target_update_frequency = target_update_frequency
 
+        self.current_action = [0 for _ in range(N_ACTIONS)]
+        self.change_action_countdown = 0
+
     def act(self, state: np.ndarray, epsilon: float):
         """
         Produces an action based on the game frame.
@@ -50,20 +53,26 @@ class DQN():
             np.ndarray: A binary vector of size 5 indicating the chosen actions.
         """
         if random() < epsilon:
-            action = [0 for _ in range(N_ACTIONS)]
-            action[randint(0, len(action) - 1)] = 1
-            return action
+            self.change_action_countdown -= 1
+            if self.change_action_countdown < 0:
+                self.change_action_countdown = 3
+                self.current_action = [0 for _ in range(N_ACTIONS)]
+                self.current_action[randint(0, len(self.current_action) - 1)] = 1
+            return self.current_action
         else:
             with torch.no_grad():
                 state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
                 q_values = self.policy_net(state).tolist()[0]
-                return [1 if q == max(q_values) else 0 for q in q_values]
+                actions = [1 if q == max(q_values) else 0 for q in q_values]
+                if actions[-1]:
+                    actions = [1 if q == max(q_values) else 0 for q in q_values[:-1]] + [1]
+                return actions
 
     def save(self, filepath: str) -> None:
-        torch.save(self.state_dict(), filepath)
+        torch.save(self.policy_net.state_dict(), filepath)
 
     def load(self, filepath: str) -> None:
-        self.load_state_dict(torch.load(filepath, weights_only=True))
+        self.policy_net.load_state_dict(torch.load(filepath, weights_only=True))
 
     def step(
             self,
@@ -85,10 +94,9 @@ class DQN():
         self.policy_net.train()
         self.step_count += 1
         self.memory.append((state, action, reward, next_state, done))
-        if len(self.memory) < self.batch_size:
+        if len(self.memory) < self.batch_size or random() < (1 / self.batch_size):
             return
 
-        # Sample from memory
         batch = sample(self.memory, self.batch_size)
         state_batch, action_batch, reward_batch, next_state_batch, done_batch = zip(*batch)
         state_batch = torch.FloatTensor(np.stack(state_batch, axis=0)).to(self.device)
@@ -113,6 +121,7 @@ class DQN():
         # Optimize
         self.optimizer.zero_grad()
         loss.backward()
+        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=1.0)
         self.optimizer.step()
 
         # Update target network
@@ -161,20 +170,63 @@ class DQN_1_shallow(nn.Module):
 class DQN_1_mid(nn.Module):
     """Deep Q network."""
 
-    def __init__(self, frame_size: int, n_frames: int):
+    def __init__(self, frame_size: int, n_frames: int, n_channels: int):
+        """
+        Args:
+            frame_size: Dimension of the input image.
+            n_frames: Number of images in the input.
+            n_channels: Number of channels in the input - either 1 or 3.
+        """
         super(DQN_1_mid, self).__init__()
-        self.network = nn.Sequential(
-            nn.Conv2d(3, 32, kernel_size=8, stride=4),
-            nn.ReLU(),
-            nn.Conv2d(32, 64, kernel_size=4, stride=2),
-            nn.ReLU(),
-            nn.Conv2d(64, 64, kernel_size=3, stride=1),
-            nn.ReLU(),
-            nn.Flatten(),
-            nn.Linear(64 * 7 * 7, 512),  # Adjust based on input size
-            nn.ReLU(),
-            nn.Linear(512, 5),
+        self.conv1 = nn.Conv2d(
+            in_channels=n_frames * n_channels,
+            out_channels=32,  # Number of filters in the first layer
+            kernel_size=8,    # Size of the convolutional kernel
+            stride=4,         # Stride for downsampling
+            padding=0         # No padding
         )
+        output_size = int((frame_size - 8) / 4 + 1)
+        # self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # output_size = int((output_size - 2) / 2 + 1)
+        self.conv2 = nn.Conv2d(
+            in_channels=32,
+            out_channels=64,
+            kernel_size=4,
+            stride=2,
+            padding=0
+        )
+        output_size = int((output_size - 4) / 2 + 1)
+        self.conv3 = nn.Conv2d(
+            in_channels=64,
+            out_channels=64,
+            kernel_size=3,
+            stride=1,
+            padding=0
+        )
+        output_size = int((output_size - 3) / 1 + 1)
+
+        self.fc1 = nn.Linear(64 * output_size * output_size, 512)
+        self.drop1 = nn.Dropout(p=0.1)
+        self.fc2 = nn.Linear(512, N_ACTIONS)
+        # self.drop2 = nn.Dropout(p=0.1)
+        # self.fc3 = nn.Linear(64, N_ACTIONS)
+        self.sigmoid = nn.Sigmoid()
 
     def forward(self, x):
-        return torch.sigmoid(self.network(x))
+        x = self.conv1(x)
+        x = F.relu(x)
+        # x = self.pool1(x)
+        x = self.conv2(x)
+        x = F.relu(x)
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = x.view(x.size(0), -1)
+        x = self.fc1(x)
+        x = F.relu(x)
+        x = self.drop1(x)
+        x = self.fc2(x)
+        x = F.relu(x)
+        # x = self.drop2(x)
+        # x = self.fc3(x)
+        x = self.sigmoid(x)
+        return x

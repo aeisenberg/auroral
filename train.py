@@ -20,6 +20,7 @@ from time import sleep, time
 import json
 from random import choices
 from collections import deque
+import datetime
 import numpy as np
 import torch
 from torchvision import transforms
@@ -173,24 +174,29 @@ def display_info(text, line = None, x = None, y = None) -> None:
         line: Line index on which to display the test.
         x, y: Coordinates of the text. Overrides `line` if provided.
     """
-    text_surface = font.render(text, False, (255, 255, 255))
+    text_surface = font.render(text, False, (50, 200, 50))
     if line is not None:
         meta_screen.blit(text_surface, (300, 24 + (24 * line)))
     else:
         meta_screen.blit(text_surface, (x, y))
 
 
-def create_level(configuration: dict, resources: dict) -> tuple:
+def create_level(
+        configuration: dict, resources: dict, evaluate: bool = False
+    ) -> tuple:
     """Create a level for an episode.
 
     Returns: Tuple containing an `environment.Environment` object and a
     resource dictionary containing the images to display the level.
     """
-    level_configuration = choices(
-        population=configuration["levels"],
-        weights=[l["frequency"] for l in configuration["levels"]],
-        k=1
-    )[0]
+    if evaluate:
+        level_configuration = configuration["evaluation_level"]
+    else:
+        level_configuration = choices(
+            population=configuration["levels"],
+            weights=[l["frequency"] for l in configuration["levels"]],
+            k=1
+        )[0]
     theme = resources[level_configuration["theme"]]
     level = environment.generate_level(
         level_configuration["n"],
@@ -221,7 +227,10 @@ def display_debug(
     meta_screen.blit(screen, (32, 32))
     display_info(f"Game footage", x=32, y=0)
     display_info(f"DQN Input", x=32, y=320)
-    display_info(f"Episode: {episode + 1}    Step: {step + 1}", line=0)
+    if is_evaluating:
+        display_info(f"Test: {episode + 1}    Step: {step + 1}", line=0)
+    else:
+        display_info(f"Episode: {episode + 1}    Step: {step + 1}", line=0)
     display_info(f"Delta = {delta:.4} s", line=1)
     display_info(f"Reward = {reward:.4}", line=2)
     display_info(f"Cumulative reward = {cumulative_reward:.4}", line=3)
@@ -289,7 +298,7 @@ def print_progress(
         print(f"\033[FTRAINING. Episode: {episode + 1} / {n_episodes}. "
             + f"Step: {step} / {n_steps}"
             + f"    Episode duration (s): {(t0 - episode_start_time):.4}"
-            + f"    Training duration (s): {(t0 - training_start_time):.4}"
+            + f"    Training duration (s): {(t0 - training_start_time):.6}"
         )
 
 
@@ -333,19 +342,21 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             "success": 0,
             "timeout": 0,
             "failures": 0,
-            "average_n_steps": -1
+            "average_n_steps": -1,
+            "evaluation_start": datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S')
         }
     )
+    quit = False
     for episode in range(episodes):
-        env, theme = create_level(configuration, resources)
+        env, theme = create_level(configuration, resources, True)
         buffer = create_buffer(env, screen, configuration, theme)
         for step in range(steps):
             t0 = time()
-            print_progress(episode, N_EPISODES, step + 1, steps,
+            print_progress(episode, episodes, step + 1, steps,
                            is_evaluating = True)
             # Act
             state = observe(env, screen, configuration, theme, buffer)
-            action = model.act(state, 0.0)
+            action = model.act(state, 0.05)
             reward, done, lost = game.frame(env, DELTA, action)
             if done and not lost:
                 success.append(step + 1)
@@ -353,16 +364,15 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             if not configuration["no_graphics"]:
                 if configuration["debug"]:
                     display_debug(meta_screen, episode, step, delta, reward,
-                                  0.0, 0.0, state, evaluations, True)
+                                  0.0, 0.05, state, evaluations, True)
                 else:
                     meta_screen.blit(screen, (0, 0))
                 pygame.display.update()
                 # Terminate the program when closing the window.
                 for event in pygame.event.get():
                     if event.type == pygame.QUIT:
-                        pygame.quit()
-                        exit()
-            if done:
+                        quit = True
+            if done or quit:
                 break
             if configuration["slow"] and delta < DELTA:
                 sleep(DELTA - delta)
@@ -377,6 +387,9 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             evaluations[-1]["average_n_steps"] = sum(success) / len(success)
         else:
             evaluations[-1]["average_n_steps"] = -1
+        if quit:
+            break
+    evaluations[-1]["evaluation_end"] = datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S')
 
 
 configuration = configure()
@@ -396,6 +409,7 @@ FINAL_EPSILON = configuration["final_epsilon"]
 training_start_time = time()
 evaluations = []
 
+quit = False
 for episode in range(N_EPISODES):
     print()  # Print the output of each episode on a distinct line.
     if episode % configuration["evaluation_frequency"] == 0:
@@ -427,12 +441,25 @@ for episode in range(N_EPISODES):
             # Terminate the program when closing the window.
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
-                    pygame.quit()
-                    exit()
-        if done:
+                    quit = True
+        if done or quit:
             break
         if configuration["slow"] and delta < DELTA:
             sleep(DELTA - delta)
+    if quit == True:
+        break
+
 
 if configuration["output"]:
-    model.save(configuration["output"])
+    try:
+        os.mkdir(configuration["output"])
+    except:
+        pass
+    model.save(configuration["output"] + "/model.pt")
+    with open(configuration["output"] + "/evaluations.json", "w") as f:
+        json.dump(evaluations, f, indent=4)
+    with open(configuration["output"] + "/configuration.json", "w") as f:
+        json.dump(configuration, f, indent=4)
+
+
+pygame.quit()

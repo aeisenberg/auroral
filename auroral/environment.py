@@ -65,9 +65,9 @@ def generate_level(
         enemies = (enemies, enemies)
     if type(danger) == int:
         danger = (danger, danger)
-    tilemap = [[list("3" + " " * (n - 2) + "3") for _ in range(n)] for _ in range(n)][0]
-    tilemap[0] = list("3" * n)
-    tilemap[-1] = list("3" * n)
+    tilemap = [[list("4" + " " * (n - 2) + "4") for _ in range(n)] for _ in range(n)][0]
+    tilemap[0] = list("4" * n)
+    tilemap[-1] = list("4" * n)
     tilemap[randint(1, n - 2)][randint(1, n - 2)] = "p"
     n_points = randint(points[0], points[1])
     while True:
@@ -101,15 +101,16 @@ def generate_level(
                     tilemap[i][j] = c
                     count -= 1
 
-    add_element("d", doors[0], doors[1])
-    add_element("k", doors[0], doors[1])
+    d = randint(doors[0], doors[1])
+    add_element("d", d, d)
+    add_element("k", d, d)
     add_element("3", walls[0], walls[1])
     add_element("w", water[0], water[1])
     add_element("t", trees[0], trees[1])
     add_element("b", int(trees[0] / 2), int(trees[1] / 2))
     add_element("e", enemies[0], enemies[1])
     add_element("s", danger[0], danger[1])
-    add_element("-", water[0], water[1])
+    add_element("-", int(water[0] / 2), int(water[1] / 2))
 
     # Swap floor and wall tiles to add more variety.
     for row in range(len(tilemap)):
@@ -315,7 +316,7 @@ class Environment:
                     self.agents.append(("enemy", EnemyAgent((j, i))))
                     self.tilemap[i][j] = "-"
                 elif tilemap[i][j] == "*":
-                    self.tilemap[i][j] = "-"
+                    self.tilemap[i][j] = " "
                     self.points.append((j, i))
         self.n_points = len(self.points)
         self.n_total_points = self.n_points
@@ -352,6 +353,7 @@ class Environment:
         original_magic = self.player.magic
         original_score = self.player.score
         original_distance = self.get_distance_to_closets_point()
+        original_n_keys = self.get_player().n_keys
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
@@ -362,18 +364,25 @@ class Environment:
         final_magic = self.player.magic
         final_score = self.player.score
         final_distance = self.get_distance_to_closets_point()
+        final_n_keys = self.get_player().n_keys
 
-        reward = -0.1  # Time penalty.
-        if final_distance < original_distance:
-            reward += 1
+        reward = 0.0
+        travel = original_distance - final_distance
+        if travel == 0.0:
+            reward -= 0.0
+            # reward -= 0.01
+        elif travel > 0:
+            reward += 0.01
         else:
-            reward -= 0.1
+            reward -= 0.01
         if final_score > original_score:
-            reward += 10
+            reward += 1.0
         if final_magic < original_magic:
             reward -= 0.1
         if final_hp < original_hp:
-            reward -= 0.1
+            reward -= 0.2
+        if final_n_keys > original_n_keys:
+            reward += 0.5
         lost = self.player.health_points <= 0.0
         return reward, self.is_end_state(), lost
 

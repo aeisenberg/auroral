@@ -239,12 +239,12 @@ def debug(
         fps = "N/A"
     else:
         fps = f"{(1.0 / delta):.6}"
-    text_surface = font.render("FPS: " + fps, False, (255, 255, 255))
+    text_surface = font.render("FPS: " + fps, False, (20, 175, 20))
     screen.blit(text_surface, (6, 48))
     avg_delta = sum(delta_buffer) / len(delta_buffer)
     if avg_delta == 0.0:
         fps = "N/A"
     else:
         fps = f"{(1.0 / avg_delta):.6}"
-    text_surface = font.render("Avg. FPS: " + fps, False, (255, 255, 255))
+    text_surface = font.render("Avg. FPS: " + fps, False, (20, 175, 20))
     screen.blit(text_surface, (6, 70))

@@ -1,0 +1,120 @@
+{
+    "model": "dqn-1-mid",
+    "device": "cuda",
+    "initial_epsilon": 1.0,
+    "final_epsilon": 0.05,
+    "n_episodes": 750,
+    "n_steps": 100,
+    "framerate": 12,
+    "n_frames": 8,
+    "frame_size": 84,
+    "n_channels": 1,
+    "learning_rate": 1e-08,
+    "batch_size": 256,
+    "target_update_frequency": 1000,
+    "evaluation_frequency": 25,
+    "evaluation_n_episodes": 20,
+    "evaluation_n_steps": 300,
+    "levels": [
+        {
+            "frequency": 1.0,
+            "theme": "2",
+            "n": 10,
+            "points": 1,
+            "walls": [
+                0,
+                4
+            ],
+            "water": [
+                0,
+                0
+            ],
+            "trees": [
+                0,
+                0
+            ],
+            "doors": [
+                0,
+                0
+            ],
+            "enemies": [
+                0,
+                0
+            ],
+            "danger": [
+                0,
+                0
+            ]
+        },
+        {
+            "frequency": 0.0,
+            "theme": "2",
+            "n": 10,
+            "points": [
+                1,
+                2
+            ],
+            "walls": [
+                3,
+                5
+            ],
+            "water": [
+                0,
+                3
+            ],
+            "trees": [
+                0,
+                5
+            ],
+            "doors": [
+                0,
+                1
+            ],
+            "enemies": [
+                0,
+                1
+            ],
+            "danger": [
+                0,
+                4
+            ]
+        }
+    ],
+    "evaluation_level": {
+        "theme": "2",
+        "n": 10,
+        "points": 1,
+        "walls": [
+            0,
+            4
+        ],
+        "water": [
+            0,
+            0
+        ],
+        "trees": [
+            0,
+            0
+        ],
+        "doors": [
+            0,
+            0
+        ],
+        "enemies": [
+            0,
+            0
+        ],
+        "danger": [
+            0,
+            0
+        ]
+    },
+    "screen_dimension": [
+        256,
+        256
+    ],
+    "slow": false,
+    "debug": true,
+    "no_graphics": false,
+    "output": "trained_models/dqn2"
+}

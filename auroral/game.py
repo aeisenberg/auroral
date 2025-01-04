@@ -133,13 +133,21 @@ def frame(
     """
     player = env.get_player()
     direction = Vector(0.0, 0.0)
-    action = {
-        "up": action[0],
-        "down": action[1],
-        "left": action[2],
-        "right": action[3],
-        "fire": action[4],
-    }
+    if len(action) < 5:
+        action = {
+            "up": action[0],
+            "down": action[1],
+            "left": action[2],
+            "right": action[3]
+        }
+    else:
+        action = {
+            "up": action[0],
+            "down": action[1],
+            "left": action[2],
+            "right": action[3],
+            "fire": action[4],
+        }
     if action["up"]:
         direction.y -= 1.0
     if action["down"]:
@@ -148,7 +156,7 @@ def frame(
         direction.x -= 1.0
     if action["right"]:
         direction.x += 1.0
-    if action["fire"]:
+    if "fire" in action and action["fire"]:
         player.fire()
     player.direction = direction.copy()
     player.direction.normalize()
