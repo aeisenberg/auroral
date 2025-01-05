@@ -6,7 +6,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from torchvision.transforms import Resize
 
 
 N_ACTIONS = 5
@@ -30,11 +29,13 @@ class DQN():
         self.target_net = network(frame_size, n_frames, n_channels).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
-        self.memory = deque(maxlen=1000)
+        self.memory = deque(maxlen=2000)
         self.optimizer = optim.Adam(
             self.policy_net.parameters(),
-            lr=learning_rate
+            lr=learning_rate,
+            weight_decay=1e-4
         )
+        self.loss_fn = nn.MSELoss()
         self.batch_size = batch_size
         self.gamma = 0.99
         self.step_count = 0
@@ -68,6 +69,12 @@ class DQN():
                     actions = [1 if q == max(q_values) else 0 for q in q_values[:-1]] + [1]
                 return actions
 
+    def q(self, state: np.ndarray):
+        with torch.no_grad():
+            state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+            q_values = self.policy_net(state).tolist()[0]
+            return q_values
+
     def save(self, filepath: str) -> None:
         torch.save(self.policy_net.state_dict(), filepath)
 
@@ -94,7 +101,7 @@ class DQN():
         self.policy_net.train()
         self.step_count += 1
         self.memory.append((state, action, reward, next_state, done))
-        if len(self.memory) < self.batch_size or random() < (1 / self.batch_size):
+        if len(self.memory) < self.batch_size:
             return
 
         batch = sample(self.memory, self.batch_size)
@@ -116,12 +123,12 @@ class DQN():
             target_q_values = reward_batch + self.gamma * max_next_q_values * (1 - done_batch)
 
         # Compute loss
-        loss = nn.MSELoss()(q_values, target_q_values)
+        loss = self.loss_fn(q_values, target_q_values)
 
         # Optimize
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=1.0)
+        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=10)
         self.optimizer.step()
 
         # Update target network
@@ -190,27 +197,26 @@ class DQN_1_mid(nn.Module):
         # output_size = int((output_size - 2) / 2 + 1)
         self.conv2 = nn.Conv2d(
             in_channels=32,
-            out_channels=64,
+            out_channels=48,
             kernel_size=4,
             stride=2,
             padding=0
         )
         output_size = int((output_size - 4) / 2 + 1)
         self.conv3 = nn.Conv2d(
-            in_channels=64,
-            out_channels=64,
+            in_channels=48,
+            out_channels=48,
             kernel_size=3,
             stride=1,
             padding=0
         )
         output_size = int((output_size - 3) / 1 + 1)
-
-        self.fc1 = nn.Linear(64 * output_size * output_size, 512)
         self.drop1 = nn.Dropout(p=0.1)
+        self.fc1 = nn.Linear(48 * output_size * output_size, 512)
+        self.drop2 = nn.Dropout(p=0.1)
         self.fc2 = nn.Linear(512, N_ACTIONS)
-        # self.drop2 = nn.Dropout(p=0.1)
         # self.fc3 = nn.Linear(64, N_ACTIONS)
-        self.sigmoid = nn.Sigmoid()
+        self.output = nn.Softmax(dim = 1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -221,12 +227,12 @@ class DQN_1_mid(nn.Module):
         x = self.conv3(x)
         x = F.relu(x)
         x = x.view(x.size(0), -1)
+        x = self.drop1(x)
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.drop1(x)
+        x = self.drop2(x)
         x = self.fc2(x)
-        x = F.relu(x)
-        # x = self.drop2(x)
+        # x = F.relu(x)
         # x = self.fc3(x)
-        x = self.sigmoid(x)
+        x = self.output(x)
         return x

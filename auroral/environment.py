@@ -369,12 +369,11 @@ class Environment:
         reward = 0.0
         travel = original_distance - final_distance
         if travel == 0.0:
-            reward -= 0.0
-            # reward -= 0.01
+            reward -= 0.01 / 2.0
         elif travel > 0:
-            reward += 0.01
+            reward += 0.01 / 2.0
         else:
-            reward -= 0.01
+            reward -= 0.01 / 2.0
         if final_score > original_score:
             reward += 1.0
         if final_magic < original_magic:

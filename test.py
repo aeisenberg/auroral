@@ -182,8 +182,8 @@ for level in range(1, 11):
                 quit = True
         if done or quit:
             break
-        if delta < DELTA:
-           sleep(DELTA - delta)
+        # if delta < DELTA:
+        #    sleep(DELTA - delta)
     if done and not lost:
         outcomes.append("s")
     else:

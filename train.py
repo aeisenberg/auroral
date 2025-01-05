@@ -105,7 +105,7 @@ def prepare_game(configuration: dict) -> tuple:
         pygame.init()
         pygame.display.set_caption("Auroral - Training")
         if configuration["debug"]:
-            meta_screen = pygame.display.set_mode((700, 512))
+            meta_screen = pygame.display.set_mode((800, 512))
         else:
             meta_screen = pygame.display.set_mode(configuration["screen_dimension"])
 
@@ -221,7 +221,8 @@ def display_debug(
         epsilon,
         state,
         evaluations,
-        is_evaluating = False
+        is_evaluating = False,
+        q=None
     ):
     meta_screen.fill((20, 20, 20))
     meta_screen.blit(screen, (32, 32))
@@ -235,6 +236,10 @@ def display_debug(
     display_info(f"Reward = {reward:.4}", line=2)
     display_info(f"Cumulative reward = {cumulative_reward:.4}", line=3)
     display_info(f"ϵ = {epsilon:.4}", line=4)
+    if q:
+        q = [f"{i:.3}, " for i in q]
+        q = "[" + "".join(q) + "]"
+        display_info(f"q = {q}", line=5)
     if evaluations:
         if is_evaluating:
             display_info(f"EVALUATING", line=6)
@@ -357,6 +362,7 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             # Act
             state = observe(env, screen, configuration, theme, buffer)
             action = model.act(state, 0.05)
+            q = model.q(state)
             reward, done, lost = game.frame(env, DELTA, action)
             if done and not lost:
                 success.append(step + 1)
@@ -364,7 +370,7 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             if not configuration["no_graphics"]:
                 if configuration["debug"]:
                     display_debug(meta_screen, episode, step, delta, reward,
-                                  0.0, 0.05, state, evaluations, True)
+                                  0.0, 0.05, state, evaluations, True, q=q)
                 else:
                     meta_screen.blit(screen, (0, 0))
                 pygame.display.update()
@@ -390,6 +396,7 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
         if quit:
             break
     evaluations[-1]["evaluation_end"] = datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S')
+    print(f"Result: {evaluations[-1]['success']} / {evaluations[-1]['total']}\n")
 
 
 configuration = configure()
@@ -412,9 +419,11 @@ evaluations = []
 quit = False
 for episode in range(N_EPISODES):
     print()  # Print the output of each episode on a distinct line.
-    if episode % configuration["evaluation_frequency"] == 0:
+    if episode % configuration["evaluation_frequency"] == 0 or episode == N_EPISODES - 1:
         evaluate(screen, model, configuration, evaluations, meta_screen)
     epsilon = (1.0 - (episode / N_EPISODES) ) * INITIAL_EPSILON
+    if episode % 20 == 0:  # Test
+        epsilon = 0.05
     env, theme = create_level(configuration, resources)
     buffer = create_buffer(env, screen, configuration, theme)
     cumulative_reward = 0.0
@@ -425,6 +434,7 @@ for episode in range(N_EPISODES):
                        episode_start_time, training_start_time)
         state = observe(env, screen, configuration, theme, buffer)
         action = model.act(state, epsilon)
+        q = model.q(state)
         reward, done, _ = game.frame(env, DELTA, action)
         next_state = observe(env, screen, configuration, theme, buffer)
         model.step(state, action, reward, next_state, done)
@@ -434,7 +444,7 @@ for episode in range(N_EPISODES):
         if not configuration["no_graphics"]:
             if configuration["debug"]:
                 display_debug(meta_screen, episode, step, delta, reward,
-                              cumulative_reward, epsilon, state, evaluations)
+                              cumulative_reward, epsilon, state, evaluations, q=q)
             else:
                 meta_screen.blit(screen, (0, 0))
             pygame.display.update()
