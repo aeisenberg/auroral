@@ -107,7 +107,7 @@ def generate_level(
     add_element("3", walls[0], walls[1])
     add_element("w", water[0], water[1])
     add_element("t", trees[0], trees[1])
-    add_element("b", int(trees[0] / 2), int(trees[1] / 2))
+    # add_element("b", int(trees[0] / 2), int(trees[1] / 2))
     add_element("e", enemies[0], enemies[1])
     add_element("s", danger[0], danger[1])
     add_element("-", int(water[0] / 2), int(water[1] / 2))
@@ -356,7 +356,7 @@ class Environment:
         original_n_keys = self.get_player().n_keys
         self.displace_agents(delta)
         self.update_agents(delta)
-        self.move_projectiles(delta)
+        n_explosions = self.move_projectiles(delta)
         self.update_animations(delta)
         self.collect_objects(delta)
         self.update_objects(delta)
@@ -369,11 +369,11 @@ class Environment:
         reward = 0.0
         travel = original_distance - final_distance
         if travel == 0.0:
-            reward -= 0.01 / 2.0
+            reward -= 0.005
         elif travel > 0:
-            reward += 0.01 / 2.0
+            reward += 0.005
         else:
-            reward -= 0.01 / 2.0
+            reward -= 0.005
         if final_score > original_score:
             reward += 1.0
         if final_magic < original_magic:
@@ -381,6 +381,8 @@ class Environment:
         if final_hp < original_hp:
             reward -= 0.2
         if final_n_keys > original_n_keys:
+            reward += 0.5
+        if n_explosions:
             reward += 0.5
         lost = self.player.health_points <= 0.0
         return reward, self.is_end_state(), lost
@@ -493,6 +495,7 @@ class Environment:
             self.push_out(agent)
 
     def move_projectiles(self, delta):
+        explosions = 0
         for p in self.projectiles:
             p.update(delta)
             # Tilemap
@@ -505,6 +508,7 @@ class Environment:
                 if row >= 0 and row < len(self.collisions) and col >= 0 and col < len(self.collisions[0]):
                     if self.objects[row][col] in ("t", "b"):
                         p.explode()
+                        explosions += 1
                         if self.objects[row][col] == "t":
                             self.tilemap[row][col] = " "
                         else:
@@ -531,6 +535,7 @@ class Environment:
                     self.animations.append(Animation("flame2", p))
                     self.burn(p, "fire2")
         self.projectiles = retained
+        return explosions
 
     def update_agents(self, delta):
         for name, agent in self.agents:
