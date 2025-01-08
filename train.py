@@ -25,7 +25,8 @@ import numpy as np
 import torch
 from torchvision import transforms
 
-from auroral import environment, game, models, render
+from auroral import models
+from auroral.game1 import environment, game, render
 
 # Change the work directory to retrieve the asset files reliably.
 abspath = os.path.abspath(__file__)

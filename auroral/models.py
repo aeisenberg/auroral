@@ -187,14 +187,12 @@ class DQN_1_mid(nn.Module):
         super(DQN_1_mid, self).__init__()
         self.conv1 = nn.Conv2d(
             in_channels=n_frames * n_channels,
-            out_channels=32,  # Number of filters in the first layer
-            kernel_size=8,    # Size of the convolutional kernel
-            stride=4,         # Stride for downsampling
-            padding=0         # No padding
+            out_channels=32,
+            kernel_size=8,
+            stride=4,
+            padding=0
         )
         output_size = int((frame_size - 8) / 4 + 1)
-        # self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
-        # output_size = int((output_size - 2) / 2 + 1)
         self.conv2 = nn.Conv2d(
             in_channels=32,
             out_channels=48,
@@ -215,7 +213,6 @@ class DQN_1_mid(nn.Module):
         self.fc1 = nn.Linear(48 * output_size * output_size, 512)
         self.drop2 = nn.Dropout(p=0.1)
         self.fc2 = nn.Linear(512, N_ACTIONS)
-        # self.fc3 = nn.Linear(64, N_ACTIONS)
         self.output = nn.Softmax(dim = 1)
 
     def forward(self, x):
@@ -232,7 +229,5 @@ class DQN_1_mid(nn.Module):
         x = F.relu(x)
         x = self.drop2(x)
         x = self.fc2(x)
-        # x = F.relu(x)
-        # x = self.fc3(x)
         x = self.output(x)
         return x
