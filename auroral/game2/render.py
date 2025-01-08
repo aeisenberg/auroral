@@ -25,6 +25,7 @@ def load_resources(directory: str) -> dict:
         "projectiles": pygame.image.load(directory + 'projectiles.png'),
         "danger": pygame.image.load(directory + 'danger.png'),
         "coin": pygame.image.load(directory + 'coin.png'),
+        "animations": pygame.image.load(directory + 'animations.png'),
         "font": pygame.font.SysFont('Liberation Mono', 24)
     }
 
@@ -79,13 +80,6 @@ def isometric(
             (projectile.position.x * W, projectile.position.y * H),
             (ix + (ix * 32) + (P / 2), iy + (iy * 32) + (P / 2), 32 - P, 32 - P)
         )
-    # Danger zones
-    for p, s in env.dangers:
-        screen.blit(
-            resources["danger"],
-            (p.x * W, p.y * H),
-            (0, 0, s.x * W, s.y * H)
-        )
     # Coins
     for coin in env.coins:
         screen.blit(resources["coin"], (coin.x * W, coin.y * H))
@@ -96,6 +90,29 @@ def isometric(
         (p.x * W, p.y * H),
         (1, 1, 32, 32)
     )
+    for e in env.enemies:
+        p = e.position
+        screen.blit(
+            resources["ship"],
+            (p.x * W, p.y * H),
+            (1, 34, 32, 32)
+        )
+    # Danger zones
+    for p, s in env.dangers:
+        screen.blit(
+            resources["danger"],
+            (p.x * W, p.y * H),
+            (0, 0, s.x * W, s.y * H)
+        )
+    # Animations
+    for a in env.animations:
+        p = a.position
+        iy = int(a.lifetime / a.total_lifetime * 7)
+        screen.blit(
+            resources["animations"],
+            (p.x * W, p.y * H),
+            (67, iy * 32 + iy + 1, 32, 32)
+        )
 
 
 def agent_state(env, screen, resources):

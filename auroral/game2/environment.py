@@ -61,6 +61,44 @@ class Agent:
         self.position += self.direction * self.speed * delta
 
 
+class EnemyAgent(Agent):
+    def __init__(self, position):
+        Agent.__init__(self, position)
+        self.speed = 0.2
+        self.direction_change_period = 1.5
+        self.shooting_timer = uniform(0.2, 2.0)
+        self.timer = 0.0
+        self.change_direction()
+        self.last_position = self.position.copy()
+        self.action = ""
+
+    def change_direction(self):
+        self.direction = choice(
+            (
+                Vector(1.0, 0.0),
+                Vector(-1.0, 0.0),
+                Vector(-1.0, 1.0),
+                Vector(-1.0, 1.0),
+                Vector(0.0, 1.0),
+            )
+        )
+
+    def update(self, delta: float):
+        self.timer += delta
+        self.shooting_timer -= delta
+        if self.timer > self.direction_change_period:
+            self.timer = 0.0
+            self.change_direction()
+        if self.shooting_timer < 0.0:
+            self.fire()
+            self.shooting_timer = uniform(0.25, 2.5)
+        Agent.update(self, delta)
+        self.last_position = self.position.copy()
+
+    def fire(self):
+        self.action = "fire2"
+
+
 class PlayerAgent(Agent):
     def __init__(self):
         Agent.__init__(self, Vector(0.5, 0.9))
@@ -93,11 +131,12 @@ class PlayerAgent(Agent):
 
 
 class Projectile:
-    def __init__(self, position, direction):
+    def __init__(self, position, direction, name):
         self.position = position
         self.direction = direction
         self.exploded = False
         self.lifetime = 2.0
+        self.name = name
 
     def update(self, delta):
         self.position += self.direction * 2.0 * delta
@@ -113,7 +152,7 @@ class Animation:
     def __init__(self, name, position):
         self.name = name
         self.position = position
-        self.total_lifetime = 0.5
+        self.total_lifetime = 0.25
         self.lifetime = 0.0
 
 
@@ -122,6 +161,7 @@ class Environment:
         self.N_MAX_COINS = 3
         self.SCROLL_SPEED = 0.5
         self.player = PlayerAgent()
+        self.enemies = []
         self.score = 0
         self.projectiles = []
         self.animations = []
@@ -228,6 +268,8 @@ class Environment:
 
     def displace_agents(self, delta):
         self.player.update(delta)
+        for enemy in self.enemies:
+            enemy.update(delta)
 
     def move_projectiles(self, delta):
         explosions = 0
@@ -247,6 +289,25 @@ class Environment:
             start = self.player.position.copy()
             if self.player.action == "fire":
                 self.projectiles.append(
-                    Projectile(start, Vector(0.0, -1.0))
+                    Projectile(start, Vector(0.0, -1.0), "fire")
                 )
                 self.player.action = ""
+        if len(self.enemies) < 9 and random() < delta * 0.3:
+            self.enemies.append(EnemyAgent(Vector(random(), -0.09)))
+        retained = []
+        for enemy in self.enemies:
+            oob = enemy.position.x < -0.1 or enemy.position.x > 1.1 or enemy.position.y < -0.1 or enemy.position.y > 1.1
+            collided = False
+            if (enemy.position - self.player.position).norm() < 0.05:
+                self.player.health_points -= delta * 0.6
+            for p in self.projectiles:
+                if (p.position - enemy.position).norm() < 0.05:
+                    collided = True
+                    p.explode()
+                    self.animations.append(Animation("ascii", p.position))
+                    self.score += 2
+            if oob or collided:
+                pass
+            else:
+                retained.append(enemy)
+        self.enemies = retained
