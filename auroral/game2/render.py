@@ -50,6 +50,7 @@ def isometric(
         camera: list = [0, 0],
         delta: float = 0.0
     ):
+    screen.fill((0, 0, 52))
     global period
     period += delta
     W = screen.get_width()
@@ -72,13 +73,16 @@ def isometric(
     # Projectiles
     for projectile in env.projectiles:
         p = projectile.position.y + projectile.position.x - 0.75
-        ix, iy = 1, 0
-        iy += int(period * 20 % 2)
+        iy = int(period * 20 % 2)
         P = 2
+        if projectile.name == "fire":
+            ix = 1
+        elif projectile.name == "fire2":
+            ix = 2
         screen.blit(
             resources["projectiles"],
             (projectile.position.x * W, projectile.position.y * H),
-            (ix + (ix * 32) + (P / 2), iy + (iy * 32) + (P / 2), 32 - P, 32 - P)
+            area = (ix + (ix * 32) + (P / 2), iy + (iy * 32) + (P / 2), 32 - P, 32 - P)
         )
     # Coins
     for coin in env.coins:
@@ -108,10 +112,14 @@ def isometric(
     for a in env.animations:
         p = a.position
         iy = int(a.lifetime / a.total_lifetime * 7)
+        if a.name == "ascii":
+            ix = 67
+        elif a.name == "ascii2":
+            ix = 100
         screen.blit(
             resources["animations"],
             (p.x * W, p.y * H),
-            (67, iy * 32 + iy + 1, 32, 32)
+            (ix, iy * 32 + iy + 1, 32, 32)
         )
 
 

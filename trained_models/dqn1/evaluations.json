@@ -1,0 +1,211 @@
+[
+    {
+        "total": 10,
+        "scores": [
+            2,
+            0,
+            4,
+            4,
+            3,
+            0,
+            0,
+            0,
+            8,
+            1
+        ],
+        "average_score": 2.2,
+        "failures": 10,
+        "evaluation_start": "2025-01-12 16:50:48",
+        "evaluation_end": "2025-01-12 16:51:22"
+    },
+    {
+        "total": 10,
+        "scores": [
+            13,
+            12,
+            23,
+            10,
+            22,
+            24,
+            18,
+            27,
+            11,
+            20
+        ],
+        "average_score": 18.0,
+        "failures": 10,
+        "evaluation_start": "2025-01-12 16:53:02",
+        "evaluation_end": "2025-01-12 16:53:35"
+    },
+    {
+        "total": 10,
+        "scores": [
+            15,
+            16,
+            18,
+            17,
+            18,
+            14,
+            15,
+            17,
+            26,
+            43
+        ],
+        "average_score": 19.9,
+        "failures": 10,
+        "evaluation_start": "2025-01-12 16:54:59",
+        "evaluation_end": "2025-01-12 16:55:41"
+    },
+    {
+        "total": 10,
+        "scores": [
+            19,
+            8,
+            15,
+            14,
+            7,
+            19,
+            13,
+            6,
+            18,
+            13
+        ],
+        "average_score": 13.2,
+        "failures": 9,
+        "evaluation_start": "2025-01-12 16:57:14",
+        "evaluation_end": "2025-01-12 16:57:54"
+    },
+    {
+        "total": 10,
+        "scores": [
+            18,
+            12,
+            28,
+            8,
+            18,
+            2,
+            13,
+            8,
+            21,
+            24
+        ],
+        "average_score": 15.2,
+        "failures": 9,
+        "evaluation_start": "2025-01-12 16:59:14",
+        "evaluation_end": "2025-01-12 16:59:51"
+    },
+    {
+        "total": 10,
+        "scores": [
+            17,
+            32,
+            13,
+            12,
+            9,
+            4,
+            23,
+            15,
+            19,
+            8
+        ],
+        "average_score": 15.2,
+        "failures": 8,
+        "evaluation_start": "2025-01-12 17:01:27",
+        "evaluation_end": "2025-01-12 17:02:11"
+    },
+    {
+        "total": 10,
+        "scores": [
+            14,
+            14,
+            17,
+            25,
+            14,
+            9,
+            12,
+            3,
+            12,
+            32
+        ],
+        "average_score": 15.2,
+        "failures": 9,
+        "evaluation_start": "2025-01-12 17:03:49",
+        "evaluation_end": "2025-01-12 17:04:26"
+    },
+    {
+        "total": 10,
+        "scores": [
+            18,
+            28,
+            7,
+            20,
+            7,
+            8,
+            8,
+            11,
+            1,
+            20
+        ],
+        "average_score": 12.8,
+        "failures": 10,
+        "evaluation_start": "2025-01-12 17:06:06",
+        "evaluation_end": "2025-01-12 17:06:40"
+    },
+    {
+        "total": 10,
+        "scores": [
+            29,
+            14,
+            7,
+            9,
+            21,
+            6,
+            11,
+            15,
+            12,
+            11
+        ],
+        "average_score": 13.5,
+        "failures": 9,
+        "evaluation_start": "2025-01-12 17:08:19",
+        "evaluation_end": "2025-01-12 17:08:53"
+    },
+    {
+        "total": 10,
+        "scores": [
+            8,
+            18,
+            17,
+            21,
+            14,
+            13,
+            24,
+            4,
+            19,
+            28
+        ],
+        "average_score": 16.6,
+        "failures": 10,
+        "evaluation_start": "2025-01-12 17:10:22",
+        "evaluation_end": "2025-01-12 17:10:59"
+    },
+    {
+        "total": 10,
+        "scores": [
+            12,
+            4,
+            7,
+            24,
+            22,
+            24,
+            16,
+            19,
+            29,
+            6
+        ],
+        "average_score": 16.3,
+        "failures": 7,
+        "evaluation_start": "2025-01-12 17:12:41",
+        "evaluation_end": "2025-01-12 17:13:25"
+    }
+]

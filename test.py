@@ -6,14 +6,13 @@ import pygame
 import argparse
 from time import sleep, time
 import json
-from random import choices
 from collections import deque
-import datetime
 import numpy as np
 import torch
 from torchvision import transforms
 
-from auroral import environment, game, models, render
+from auroral import models
+from auroral.game2 import environment, game, render
 
 
 def configure() -> dict:
@@ -53,24 +52,6 @@ def configure() -> dict:
     return configuration, model
 
 
-def load_resources(configuration: dict) -> dict:
-    """Load images required to display the game.
-
-    Args:
-        configuration: Configuration values.
-    """
-    MATCHES_FILE = "assets/matches.json"
-    resources = {}
-    for level_configuration in configuration["levels"]:
-        theme = level_configuration["theme"]
-        resources[theme] = render.load_resources(
-            "assets/",
-            MATCHES_FILE,
-            theme
-        )
-    return resources
-
-
 def prepare_game(configuration: dict) -> tuple:
     """Prepare the Pygame window and surface.
 
@@ -92,7 +73,7 @@ def prepare_game(configuration: dict) -> tuple:
 def update_screen(
         env: environment.Environment,
         screen: pygame.Surface,
-        theme: dict,
+        resources: dict,
         configuration: dict
     ) -> None:
     """Update the game screen used by the agent."""
@@ -101,7 +82,7 @@ def update_screen(
     render.isometric(
         env,
         screen,
-        theme,
+        resources,
         (256, 256),
         (position.x, position.y),
         1.0 / configuration["framerate"]
@@ -127,11 +108,11 @@ def observe(
         env: environment.Environment,
         screen: pygame.Surface,
         configuration: dict,
-        theme: dict,
+        resources: dict,
         buffer: deque
     ) -> torch.Tensor:
     """Observe the state of the environment."""
-    update_screen(env, screen, theme, configuration)
+    update_screen(env, screen, resources, configuration)
     array = pygame.surfarray.array3d(screen)
     array = prepare_frame(array, configuration)
     tensor =  torch.Tensor(array)
@@ -154,24 +135,23 @@ def create_buffer(
 
 configuration, model = configure()
 screen, meta_screen, font = prepare_game(configuration)
-resources = load_resources(configuration)
+resources = render.load_resources("assets/")
 DELTA = 1.0 / configuration["framerate"]
 
 quit = False
 outcomes = []
+scores = []
 for level in range(1, 11):
-    tilemap = environment.load(f"assets/levels/{level}.json")
-    env = environment.Environment(tilemap)
-    theme = resources[configuration["evaluation_level"]["theme"]]
-    buffer = create_buffer(env, screen, configuration, theme)
+    env = environment.Environment()
+    buffer = create_buffer(env, screen, configuration, resources)
     cumulative_reward = 0.0
     episode_start_time = time()
     for step in range(500):
         t0 = time()
-        state = observe(env, screen, configuration, theme, buffer)
+        state = observe(env, screen, configuration, resources, buffer)
         action = model.act(state, 0.05)
         reward, done, lost = game.frame(env, DELTA, action)
-        next_state = observe(env, screen, configuration, theme, buffer)
+        next_state = observe(env, screen, configuration, resources, buffer)
         model.step(state, action, reward, next_state, done)
         t1 = time()
         cumulative_reward += reward
@@ -184,11 +164,14 @@ for level in range(1, 11):
             break
         # if delta < DELTA:
         #    sleep(DELTA - delta)
-    if done and not lost:
-        outcomes.append("s")
-    else:
+    scores.append(env.get_score())
+    if lost:
         outcomes.append("f")
+    else:
+        outcomes.append("s")
+    print(f"{level}: {scores[-1]} {outcomes[-1]} {step}")
     if quit == True:
         break
 
+print(scores)
 print(outcomes)

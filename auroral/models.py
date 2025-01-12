@@ -64,10 +64,7 @@ class DQN():
             with torch.no_grad():
                 state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
                 q_values = self.policy_net(state).tolist()[0]
-                actions = [1 if q == max(q_values) else 0 for q in q_values]
-                if actions[-1]:
-                    actions = [1 if q == max(q_values) else 0 for q in q_values[:-1]] + [1]
-                return actions
+                return [1 if q == max(q_values) else 0 for q in q_values]
 
     def q(self, state: np.ndarray):
         with torch.no_grad():
@@ -128,7 +125,7 @@ class DQN():
         # Optimize
         self.optimizer.zero_grad()
         loss.backward()
-        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=10)
+        torch.nn.utils.clip_grad_norm_(self.policy_net.parameters(), max_norm=10.0)
         self.optimizer.step()
 
         # Update target network
@@ -227,7 +224,7 @@ class DQN_1_mid(nn.Module):
         x = self.drop1(x)
         x = self.fc1(x)
         x = F.relu(x)
-        x = self.drop2(x)
+        # x = self.drop2(x)
         x = self.fc2(x)
         x = self.output(x)
         return x

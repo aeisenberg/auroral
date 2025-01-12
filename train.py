@@ -26,7 +26,7 @@ import torch
 from torchvision import transforms
 
 from auroral import models
-from auroral.game1 import environment, game, render
+from auroral.game2 import environment, game, render
 
 # Change the work directory to retrieve the asset files reliably.
 abspath = os.path.abspath(__file__)
@@ -113,24 +113,6 @@ def prepare_game(configuration: dict) -> tuple:
     return screen, meta_screen, font
 
 
-def load_resources(configuration: dict) -> dict:
-    """Load images required to display the game.
-
-    Args:
-        configuration: Configuration values.
-    """
-    MATCHES_FILE = "assets/matches.json"
-    resources = {}
-    for level_configuration in configuration["levels"]:
-        theme = level_configuration["theme"]
-        resources[theme] = render.load_resources(
-            "assets/",
-            MATCHES_FILE,
-            theme
-        )
-    return resources
-
-
 def create_DQN(configuration: dict) -> models.DQN:
     """Create a deep Q network as defined in the configuration."""
     if configuration["model"] == "dqn-1-shallow":
@@ -175,41 +157,11 @@ def display_info(text, line = None, x = None, y = None) -> None:
         line: Line index on which to display the test.
         x, y: Coordinates of the text. Overrides `line` if provided.
     """
-    text_surface = font.render(text, False, (50, 200, 50))
+    text_surface = font.render(text, False, (140, 175, 255))
     if line is not None:
         meta_screen.blit(text_surface, (300, 24 + (24 * line)))
     else:
         meta_screen.blit(text_surface, (x, y))
-
-
-def create_level(
-        configuration: dict, resources: dict, evaluate: bool = False
-    ) -> tuple:
-    """Create a level for an episode.
-
-    Returns: Tuple containing an `environment.Environment` object and a
-    resource dictionary containing the images to display the level.
-    """
-    if evaluate:
-        level_configuration = configuration["evaluation_level"]
-    else:
-        level_configuration = choices(
-            population=configuration["levels"],
-            weights=[l["frequency"] for l in configuration["levels"]],
-            k=1
-        )[0]
-    theme = resources[level_configuration["theme"]]
-    level = environment.generate_level(
-        level_configuration["n"],
-        level_configuration["points"],
-        level_configuration["walls"],
-        level_configuration["water"],
-        level_configuration["trees"],
-        level_configuration["doors"],
-        level_configuration["enemies"],
-        level_configuration["danger"],
-    )
-    return environment.Environment(level), theme
 
 
 def display_debug(
@@ -243,17 +195,13 @@ def display_debug(
         display_info(f"q = {q}", line=5)
     if evaluations:
         if is_evaluating:
-            display_info(f"EVALUATING", line=6)
+            display_info(f"EVALUATING", line=7)
         else:
-            display_info(f"Last evaluation", line=6)
-        display_info(f"N success: {evaluations[-1]['success']}", line=7)
-        display_info(f"N timeout: {evaluations[-1]['timeout']}", line=8)
-        display_info(f"N failures: {evaluations[-1]['failures']}", line=9)
-        n_steps = evaluations[-1]['average_n_steps']
-        if n_steps > 0:
-            display_info(f"N steps: {n_steps:.4}", line=10)
-        else:
-            display_info(f"N steps: N/A", line=10)
+            display_info(f"Last evaluation", line=7)
+        display_info(f"Average: {evaluations[-1]['average_score']}", line=8)
+        n = evaluations[-1]['failures']
+        N = len(evaluations[-1]['scores'])
+        display_info(f"Failures: {n} / {N}", line=9)
     else:
         display_info("The model has not been", line=6)
         display_info("evaluated yet.", line=7)
@@ -341,32 +289,28 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
     episodes = configuration["evaluation_n_episodes"]
     steps = configuration["evaluation_n_steps"]
     DELTA = 1.0 / configuration["framerate"]
-    success = []
     evaluations.append(
         {
             "total": episodes,
-            "success": 0,
-            "timeout": 0,
+            "scores": [],
+            "average_score": 0,
             "failures": 0,
-            "average_n_steps": -1,
             "evaluation_start": datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S')
         }
     )
     quit = False
     for episode in range(episodes):
-        env, theme = create_level(configuration, resources, True)
-        buffer = create_buffer(env, screen, configuration, theme)
+        env = environment.Environment()
+        buffer = create_buffer(env, screen, configuration, resources)
         for step in range(steps):
             t0 = time()
             print_progress(episode, episodes, step + 1, steps,
                            is_evaluating = True)
             # Act
-            state = observe(env, screen, configuration, theme, buffer)
+            state = observe(env, screen, configuration, resources, buffer)
             action = model.act(state, 0.05)
             q = model.q(state)
             reward, done, lost = game.frame(env, DELTA, action)
-            if done and not lost:
-                success.append(step + 1)
             delta = time() - t0
             if not configuration["no_graphics"]:
                 if configuration["debug"]:
@@ -385,24 +329,18 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
                 sleep(DELTA - delta)
         if lost:
             evaluations[-1]["failures"] += 1
-        elif step + 1 >= steps:
-            evaluations[-1]["timeout"] += 1
-        else:
-            evaluations[-1]["success"] += 1
-            success.append(step + 1)
-        if success:
-            evaluations[-1]["average_n_steps"] = sum(success) / len(success)
-        else:
-            evaluations[-1]["average_n_steps"] = -1
+        evaluations[-1]["scores"].append(env.get_score())
+        average = np.mean(evaluations[-1]["scores"])
+        evaluations[-1]["average_score"] = average
         if quit:
             break
     evaluations[-1]["evaluation_end"] = datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S')
-    print(f"Result: {evaluations[-1]['success']} / {evaluations[-1]['total']}\n")
+    print(f"Result: {average}; {evaluations[-1]['failures']}\n")
 
 
 configuration = configure()
 screen, meta_screen, font = prepare_game(configuration)
-resources = load_resources(configuration)
+resources = render.load_resources("assets/")
 DELTA = 1.0 / configuration["framerate"]
 N_FRAMES = configuration["n_frames"]
 model = create_DQN(configuration)
@@ -425,19 +363,19 @@ for episode in range(N_EPISODES):
     epsilon = (1.0 - (episode / N_EPISODES) ) * INITIAL_EPSILON
     if episode % 20 == 0:  # Test
         epsilon = 0.05
-    env, theme = create_level(configuration, resources)
-    buffer = create_buffer(env, screen, configuration, theme)
+    env = environment.Environment()
+    buffer = create_buffer(env, screen, configuration, resources)
     cumulative_reward = 0.0
     episode_start_time = time()
     for step in range(N_STEPS):
         t0 = time()
         print_progress(episode, N_EPISODES, step + 1, N_STEPS, t0,
                        episode_start_time, training_start_time)
-        state = observe(env, screen, configuration, theme, buffer)
+        state = observe(env, screen, configuration, resources, buffer)
         action = model.act(state, epsilon)
         q = model.q(state)
         reward, done, _ = game.frame(env, DELTA, action)
-        next_state = observe(env, screen, configuration, theme, buffer)
+        next_state = observe(env, screen, configuration, resources, buffer)
         model.step(state, action, reward, next_state, done)
         t1 = time()
         cumulative_reward += reward
