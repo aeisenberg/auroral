@@ -7,9 +7,9 @@ File information:
     - License: MIT
 """
 
-import numpy as np
-from random import uniform, choice, randint, random
-from math import atan, pi, sin, cos
+from random import uniform, choice, random
+from math import pi, sin, cos
+from pygame.mixer import music
 
 
 class Vector():
@@ -129,6 +129,11 @@ class PlayerAgent(Agent):
             self.action = "fire"
             self.power -= 0.1
 
+    def heal(self, hp) -> None:
+        self.health_points += hp
+        if self.health_points > 1.0:
+            self.health_points = 1.0
+
 
 class Projectile:
     def __init__(self, position, direction, name, speed = 2.0):
@@ -158,7 +163,7 @@ class Animation:
 
 
 class Environment:
-    def __init__(self):
+    def __init__(self, use_audio = False):
         self.N_MAX_COINS = 1
         self.N_MAX_DANGER_ZONES = 3
         self.N_MAX_ENEMIES = 3
@@ -173,6 +178,12 @@ class Environment:
         self.animations = []
         self.coins = []
         self.dangers = []
+        self.audio = use_audio
+        if self.audio:
+            self.sounds = {
+                "fire": "assets/sound/enemy.mp3",
+                "damage": "assets/sound/laser.mp3",
+            }
 
     def get_player(self) -> Agent:
         return self.player
@@ -222,6 +233,7 @@ class Environment:
             coin.y += delta * 0.3
             if abs(coin.x - self.player.position.x) < 0.1 and 0 < self.player.position.y - coin.y < 0.1:
                 self.score += 1
+                self.player.heal(0.05)
             elif coin.y > 1.05:
                 pass
             else:
@@ -229,7 +241,7 @@ class Environment:
         self.coins = retained
 
     def update_danger(self, delta: float):
-        if len(self.dangers) < self.N_MAX_DANGER_ZONES and random() < delta * 0.2:
+        if len(self.dangers) < self.N_MAX_DANGER_ZONES and random() < delta * 0.4:
             h = uniform(0.2, 0.5)
             if len(self.dangers) == 0:
                 self.dangers.append(
@@ -332,12 +344,18 @@ class Environment:
                     Projectile(start, Vector(0.0, -1.0), "fire", 6.0)
                 )
                 self.player.action = ""
+                if self.audio:
+                    music.load(self.sounds["fire"])
+                    music.play()
         retained = []
         for p in self.projectiles:
             if p.name == "fire2" and (p.position - self.player.position).norm() < 0.05:
                 p.explode()
                 self.animations.append(Animation("ascii2", p.position))
                 self.player.health_points -= 0.1
+                if self.audio:
+                    music.load(self.sounds["damage"])
+                    music.play()
             else:
                 retained.append(p)
         self.projectiles = retained

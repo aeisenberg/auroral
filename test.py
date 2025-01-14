@@ -142,7 +142,7 @@ quit = False
 outcomes = []
 scores = []
 for level in range(1, 11):
-    env = environment.Environment()
+    env = environment.Environment(True)
     buffer = create_buffer(env, screen, configuration, resources)
     cumulative_reward = 0.0
     episode_start_time = time()
@@ -156,14 +156,15 @@ for level in range(1, 11):
         t1 = time()
         cumulative_reward += reward
         delta = t1 - t0
+        render.agent_state(env, screen, resources)
         pygame.display.update()
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 quit = True
         if done or quit:
             break
-        # if delta < DELTA:
-        #    sleep(DELTA - delta)
+        if delta < DELTA:
+           sleep(DELTA - delta)
     scores.append(env.get_score())
     if lost:
         outcomes.append("f")

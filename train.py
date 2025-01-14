@@ -106,7 +106,7 @@ def prepare_game(configuration: dict) -> tuple:
         pygame.init()
         pygame.display.set_caption("Auroral - Training")
         if configuration["debug"]:
-            meta_screen = pygame.display.set_mode((800, 512))
+            meta_screen = pygame.display.set_mode((1000, 512))
         else:
             meta_screen = pygame.display.set_mode(configuration["screen_dimension"])
 
@@ -189,19 +189,16 @@ def display_debug(
     display_info(f"Reward = {reward:.4}", line=2)
     display_info(f"Cumulative reward = {cumulative_reward:.4}", line=3)
     display_info(f"ϵ = {epsilon:.4}", line=4)
-    if q:
-        q = [f"{i:.3}, " for i in q]
-        q = "[" + "".join(q) + "]"
-        display_info(f"q = {q}", line=5)
     if evaluations:
         if is_evaluating:
-            display_info(f"EVALUATING", line=7)
+            display_info(f"EVALUATING", line=6)
         else:
-            display_info(f"Last evaluation", line=7)
-        display_info(f"Average: {evaluations[-1]['average_score']}", line=8)
+            display_info(f"Last evaluation", line=6)
+        average = float(evaluations[-1]['average_score'])
+        display_info(f"Average Score: {average:.3}", line=7)
         n = evaluations[-1]['failures']
         N = len(evaluations[-1]['scores'])
-        display_info(f"Failures: {n} / {N}", line=9)
+        display_info(f"Defeats: {n} / {N}", line=8)
     else:
         display_info("The model has not been", line=6)
         display_info("evaluated yet.", line=7)
@@ -313,6 +310,7 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             reward, done, lost = game.frame(env, DELTA, action)
             delta = time() - t0
             if not configuration["no_graphics"]:
+                render.agent_state(env, screen, resources)
                 if configuration["debug"]:
                     display_debug(meta_screen, episode, step, delta, reward,
                                   0.0, 0.05, state, evaluations, True, q=q)

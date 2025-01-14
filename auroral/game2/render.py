@@ -129,7 +129,7 @@ def agent_state(env, screen, resources):
     pygame.draw.rect(screen, BLACK, (6, 24, 128, 16))
     pygame.draw.rect(screen, RED, (8, 26, env.get_player().health_points * 124, 12))
     text_surface = resources["font"].render(str(env.score), False, (200, 200, 255))
-    screen.blit(text_surface, (6, 44))
+    screen.blit(text_surface, (140, 6))
 
 
 def debug(

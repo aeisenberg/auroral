@@ -6,7 +6,7 @@
     "n_episodes": 100,
     "n_steps": 500,
     "framerate": 15,
-    "n_frames": 8,
+    "n_frames": 12,
     "frame_size": 84,
     "n_channels": 3,
     "learning_rate": 1e-05,

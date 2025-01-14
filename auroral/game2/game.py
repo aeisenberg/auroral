@@ -30,7 +30,7 @@ def play(screen: pygame.Surface) -> tuple[int]:
         debug: If `True`, display debugging information on the screen.
     """
     dimensions = (screen.get_width(), screen.get_height())
-    env = environment.Environment()
+    env = environment.Environment(True)
     player = env.get_player()
     resources = render.load_resources("assets/")
     ti = time.time()
