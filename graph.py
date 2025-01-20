@@ -17,13 +17,16 @@ with open(args.path) as f:
     content = json.load(f)
 
 averages = []
+steps = []
 for level in content:
     averages.append(level["average_score"])
+    steps.append(level["average_n_steps"])
 
 fig, ax = plt.subplots()
+ax2 = ax.twinx()
+ax3 = ax.twinx()
 x = [i * 10 for i in range(len(averages))]
-ax.plot(x, averages)
-ax.set(xlabel='Level', ylabel='Score',
-       title='Score over levels')
+ax2.plot(x, averages)
+# ax3.plot(x, steps)
 ax.grid()
 plt.show()

@@ -109,14 +109,16 @@ def observe(
         screen: pygame.Surface,
         configuration: dict,
         resources: dict,
-        buffer: deque
+        buffer: deque,
+        add: bool = True
     ) -> torch.Tensor:
     """Observe the state of the environment."""
     update_screen(env, screen, resources, configuration)
     array = pygame.surfarray.array3d(screen)
     array = prepare_frame(array, configuration)
     tensor =  torch.Tensor(array)
-    buffer.append(tensor)
+    if add:
+        buffer.append(tensor)
     return torch.cat(tuple(buffer), dim=0)
 
 
@@ -136,25 +138,27 @@ def create_buffer(
 configuration, model = configure()
 screen, meta_screen, font = prepare_game(configuration)
 resources = render.load_resources("assets/")
-DELTA = 1.0 / configuration["framerate"]
+DELTA = 1.0 / 30.0  # 1.0 / configuration["framerate"]
 
 quit = False
 outcomes = []
 scores = []
-for level in range(1, 11):
-    env = environment.Environment(True)
+for level in range(1, 30):
+    env = environment.Environment(False)
     buffer = create_buffer(env, screen, configuration, resources)
     cumulative_reward = 0.0
     episode_start_time = time()
-    for step in range(500):
+    for step in range(750):
         t0 = time()
-        state = observe(env, screen, configuration, resources, buffer)
-        action = model.act(state, 0.05)
-        reward, done, lost = game.frame(env, DELTA, action)
-        next_state = observe(env, screen, configuration, resources, buffer)
-        model.step(state, action, reward, next_state, done)
+        if step % 2 == 0:
+            state = observe(env, screen, configuration, resources, buffer)
+            action = model.act(state, 0.05)
+            reward, done, lost = game.frame(env, DELTA, action)
+            next_state = observe(env, screen, configuration, resources, buffer, False)
+        else:
+            reward, done, lost = game.frame(env, DELTA, action)
+            state = observe(env, screen, configuration, resources, buffer, False)
         t1 = time()
-        cumulative_reward += reward
         delta = t1 - t0
         render.agent_state(env, screen, resources)
         pygame.display.update()

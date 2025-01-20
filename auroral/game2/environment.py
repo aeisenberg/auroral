@@ -165,7 +165,7 @@ class Animation:
 class Environment:
     def __init__(self, use_audio = False):
         self.N_MAX_COINS = 1
-        self.N_MAX_DANGER_ZONES = 3
+        self.N_MAX_DANGER_ZONES = 1
         self.N_MAX_ENEMIES = 3
         self.SCROLL_SPEED = 0.5
         self.player = PlayerAgent()
@@ -183,6 +183,7 @@ class Environment:
             self.sounds = {
                 "fire": "assets/sound/enemy.mp3",
                 "damage": "assets/sound/laser.mp3",
+                "coin": "assets/sound/enemy2.mp3",
             }
 
     def get_player(self) -> Agent:
@@ -204,8 +205,8 @@ class Environment:
         final_score = self.score
         final_position = self.player.position.copy()
         reward = 0.0
-        if final_position == original_position:
-            reward -= 0.05
+        # if final_position == original_position:
+        #     reward -= 0.05
         if final_score >= original_score + 2:
             reward += 2.0
         elif final_score >= original_score + 1:
@@ -213,7 +214,7 @@ class Environment:
         if final_power < original_power:
             reward -= 0.05
         if final_hp < original_hp:
-            reward -= 0.3
+            reward -= (original_hp - final_hp) * 10
         lost = self.player.health_points <= 0.0
         return reward, self.is_end_state(), lost
 
@@ -231,9 +232,12 @@ class Environment:
         retained = []
         for coin in self.coins:
             coin.y += delta * 0.3
-            if abs(coin.x - self.player.position.x) < 0.1 and 0 < self.player.position.y - coin.y < 0.1:
+            if abs(coin.x - self.player.position.x) < 0.1 and -0.1 < self.player.position.y - coin.y < 0.1:
                 self.score += 1
-                self.player.heal(0.05)
+                self.player.heal(0.1)
+                if self.audio:
+                    music.load(self.sounds["coin"])
+                    music.play()
             elif coin.y > 1.05:
                 pass
             else:
@@ -241,18 +245,18 @@ class Environment:
         self.coins = retained
 
     def update_danger(self, delta: float):
-        if len(self.dangers) < self.N_MAX_DANGER_ZONES and random() < delta * 0.4:
+        if len(self.dangers) < self.N_MAX_DANGER_ZONES and random() < delta * 0.8:
             h = uniform(0.2, 0.5)
             if len(self.dangers) == 0:
                 self.dangers.append(
                     [
-                        Vector(uniform(0.0, 0.9), -0.1 - h),
+                        Vector(uniform(-0.1, 0.9), -0.1 - h),
                         Vector(uniform(0.2, 0.4), h)
                     ]
                 )
             else:
                 for _ in range(5):
-                    x = uniform(0.0, 0.9)
+                    x = uniform(-0.1, 0.9)
                     w = uniform(0.2, 0.4)
                     if x > self.dangers[0][0].x and x + w < self.dangers[0][0].x + self.dangers[0][1].x:
                         continue

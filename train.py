@@ -292,6 +292,8 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             "scores": [],
             "average_score": 0,
             "failures": 0,
+            "n_steps": [],
+            "average_n_steps": 0,
             "evaluation_start": datetime.datetime.fromtimestamp(time()).strftime('%Y-%m-%d %H:%M:%S')
         }
     )
@@ -327,6 +329,9 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
                 sleep(DELTA - delta)
         if lost:
             evaluations[-1]["failures"] += 1
+        evaluations[-1]["n_steps"].append(step)
+        average = np.mean(evaluations[-1]["n_steps"])
+        evaluations[-1]["average_n_steps"] = average
         evaluations[-1]["scores"].append(env.get_score())
         average = np.mean(evaluations[-1]["scores"])
         evaluations[-1]["average_score"] = average
