@@ -1,10 +1,10 @@
 Auroral
 =======
 
-- `English (en) <#A-self-contained-Game-for-Reinforcement-Learning>`_
+- `English (en) <#Games-to-Explore-Reinforcement-Learning>`_
 - `Français (fr) <#Jeux-2D-pour-explorer-l'apprentissage-par-renforcement>`_
 
-.. image:: demo.gif
+.. image:: assets/demo.gif
    :width: 600
    :alt: Comparison of the models. On the left, the untrained model scores 1 point over 12 seconds
       while on the right, the trained model scores 14 points in the same time frame.
