@@ -51,7 +51,7 @@ Two games are available. You can select them with the ``--game <1 or 2>`` comman
    :width: 200
 
 +--------------------------------------------------+----------------------------------------------+
-| .. |game1| image:: assets/game1.png              | .. |game2| image:: assets/game2.png          |
+| .. image:: assets/game1.png                      | .. game2 image:: assets/game2.png            |
 |    :align: middle                                |    :align: middle                            |
 |    :width: 200                                   |    :width: 200                               |
 |                                                  |                                              |
