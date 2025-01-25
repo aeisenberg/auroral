@@ -22,9 +22,13 @@ def load(level_filename: str) -> tuple:
 
     Returns: Tuple organized as `tilemap, objects, agents`.
     """
-    with open(level_filename) as f:
-        content = json.load(f)
-    tilemap = [list(line) for line in content]
+    try:
+        with open(level_filename) as f:
+            content = json.load(f)
+        tilemap = [list(line) for line in content]
+    except:
+        print(f"Invalid level: {level_filename}.")
+        exit()
     return tilemap
 
 

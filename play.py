@@ -19,7 +19,8 @@ import pygame
 import argparse
 from time import sleep
 
-from auroral.game2 import game
+from auroral.game1 import game as game1
+from auroral.game2 import game as game2
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -41,6 +42,18 @@ parser.add_argument(
     help="Define the size of the screen. Default: 512",
     type=int
 )
+parser.add_argument(
+    "-g",
+    "--game",
+    help="Game to play. `1` or `2`. Default: 2.",
+    type=int
+)
+parser.add_argument(
+    "-l",
+    "--level",
+    help="Level to use for game 1.",
+    type=int
+)
 
 args = parser.parse_args()
 DEBUG = args.debug
@@ -59,4 +72,7 @@ screen = pygame.display.set_mode(SCREEN_DIMENSIONS)
 ALL_LEVELS = [f for f in os.listdir("assets/levels") if f.endswith(".json")]
 ALL_THEMES = [f for f in os.listdir("assets/themes") if f.isnumeric()]
 
-game.play(screen)
+if args.game == 1:
+    game1.play(screen, args.level)
+elif args.game == 2:
+    game2.play(screen)

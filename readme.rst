@@ -2,10 +2,11 @@ Auroral
 =======
 
 - `English (en) <#Games-to-Explore-Reinforcement-Learning>`_
-- `Français (fr) <#Jeux-2D-pour-explorer-l'apprentissage-par-renforcement>`_
+- `Français (fr) <#jeux-2D-pour-explorer-lapprentissage-par-renforcement>`_
 
 .. image:: assets/demo.gif
-   :width: 600
+   :width: 400
+   :align: center
    :alt: Comparison of the models. On the left, the untrained model scores 1 point over 12 seconds
       while on the right, the trained model scores 14 points in the same time frame.
 
@@ -40,6 +41,21 @@ Usage
    python3 play.py  # Linux
    py play.py  # Windows
 
+Two games are available. You can select them with the ``--game <1 or 2>`` command-line argument.
+
+.. |game1| image:: assets/game1.png
+   :align: middle
+   :width: 200
+.. |game2| image:: assets/game2.png
+   :align: middle
+   :width: 200
+
++--------------------------------------------------+----------------------------------------------+
+| |logo1|                                          | |logo2|                                      |
+|                                                  | Select a level with the command-line option  |
+|                                                  | ``--level <n>``.                             |
++--------------------------------------------------+----------------------------------------------+
+
 **Train** a reinforcement learning agents:
 
 .. code-block:: bash
@@ -48,10 +64,10 @@ Usage
    py train.py <configuration file> --output <output directory>  # Windows
 
 The ``<configuration file>`` is a JSON file that parametrizes the training session. You can use,
-for example, the file ``training/test.json``. The ``<output directory>`` is an optional parameter.
-It is used to save the trained model to a file.
+for example, the file ``training/dqn2.json``. The ``<output directory>`` is an optional parameter.
+It is used to save the trained model.
 
-**Test** the models:
+**Test** a model:
 
 .. code-block:: bash
 
@@ -69,3 +85,4 @@ repository already contains a trained model, so you can run, for instance:
 
 Jeux 2D pour explorer l'apprentissage par renforcement
 ------------------------------------------------------
+

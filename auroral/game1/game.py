@@ -20,9 +20,9 @@ MATCHES_FILE = "assets/matches.json"
 
 def play(
         screen: pygame.Surface,
-        level_file: str,
-        theme: str,
-        debug: bool
+        level_file: str = None,
+        theme: str = "2",
+        debug: bool = False
     ) -> tuple[int]:
     """Play the game in interactive mode.
 
@@ -35,9 +35,9 @@ def play(
         debug: If `True`, display debugging information on the screen.
     """
     dimensions = (screen.get_width(), screen.get_height())
-    try:
-        tilemap = environment.load(level_file)
-    except:
+    if level_file:
+        tilemap = environment.load(f"assets/levels/{level_file}.json")
+    else:
         tilemap = environment.generate_level(16)
     env = environment.Environment(tilemap)
     player = env.get_player()
