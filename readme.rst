@@ -45,15 +45,17 @@ Two games are available. You can select them with the ``--game <1 or 2>`` comman
 First game:
 
 .. image:: assets/game1.png
-   :align: middle
    :width: 200
+   :align: center
+   :alt: Start state of the first game.
 
-Select a level with the command-line option ``--level <n>``, where ``n`` is between 1 and 11,
-inclusively. Second game:
+You can select a level with the command-line option ``--level <n>``, where ``n`` is between 1 and
+11, inclusively. Second game:
 
 .. image:: assets/game2.png
-   :align: middle
    :width: 200
+   :align: center
+   :alt: Start state of the second game.
 
 **Train** a reinforcement learning agents:
 
