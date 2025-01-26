@@ -9,7 +9,6 @@ File information:
 
 from random import uniform, choice, random
 from math import pi, sin, cos
-from pygame.mixer import music
 
 
 class Vector():
@@ -179,12 +178,6 @@ class Environment:
         self.coins = []
         self.dangers = []
         self.audio = use_audio
-        if self.audio:
-            self.sounds = {
-                "fire": "assets/sound/enemy.mp3",
-                "damage": "assets/sound/laser.mp3",
-                "coin": "assets/sound/enemy2.mp3",
-            }
 
     def get_player(self) -> Agent:
         return self.player
@@ -193,7 +186,6 @@ class Environment:
         original_hp = self.player.health_points
         original_power = self.player.power
         original_score = self.score
-        original_position = self.player.position.copy()
         self.displace_agents(delta)
         self.update_agents(delta)
         self.move_projectiles(delta)
@@ -203,10 +195,7 @@ class Environment:
         final_hp = self.player.health_points
         final_power = self.player.power
         final_score = self.score
-        final_position = self.player.position.copy()
         reward = 0.0
-        # if final_position == original_position:
-        #     reward -= 0.05
         if final_score >= original_score + 2:
             reward += 2.0
         elif final_score >= original_score + 1:
@@ -235,9 +224,6 @@ class Environment:
             if abs(coin.x - self.player.position.x) < 0.1 and -0.1 < self.player.position.y - coin.y < 0.1:
                 self.score += 1
                 self.player.heal(0.1)
-                if self.audio:
-                    music.load(self.sounds["coin"])
-                    music.play()
             elif coin.y > 1.05:
                 pass
             else:
@@ -348,18 +334,12 @@ class Environment:
                     Projectile(start, Vector(0.0, -1.0), "fire", 6.0)
                 )
                 self.player.action = ""
-                if self.audio:
-                    music.load(self.sounds["fire"])
-                    music.play()
         retained = []
         for p in self.projectiles:
             if p.name == "fire2" and (p.position - self.player.position).norm() < 0.05:
                 p.explode()
                 self.animations.append(Animation("ascii2", p.position))
                 self.player.health_points -= 0.1
-                if self.audio:
-                    music.load(self.sounds["damage"])
-                    music.play()
             else:
                 retained.append(p)
         self.projectiles = retained
