@@ -149,7 +149,7 @@ Refer to the following papers for more details on reinforcement learning:
 Jeux 2D pour explorer l'apprentissage par renforcement
 ------------------------------------------------------
 
-Environnements d'apprentissage automatique 2D pour explorer des techniques d'apprentissage
+Environnements d'apprentissage par renforcement 2D pour explorer des techniques d'apprentissage
 automatique. Vous pouvez utiliser les environnements pour entraîner des agents ou juste pour jouer
 ``:)``.
 
