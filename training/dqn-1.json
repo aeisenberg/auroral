@@ -1,4 +1,5 @@
 {
+    "game": 2,
     "model": "dqn-1-mid",
     "device": "cuda",
     "initial_epsilon": 1.0,

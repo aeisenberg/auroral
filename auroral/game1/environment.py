@@ -401,9 +401,9 @@ class Environment:
 
     def get_score(self) -> tuple[int]:
         if self.player.health_points < 0:
-            return None
+            return 0
         else:
-            return int(self.player.score), self.n_total_points
+            return int(self.player.score)
 
     def is_end_state(self):
         if self.player.health_points <= 0.0:

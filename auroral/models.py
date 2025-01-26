@@ -1,3 +1,10 @@
+"""
+    File information:
+    - Author: Vincent Therrien (therrien.vincent.2@courrier.uqam.ca)
+    - File creation date: December 2024
+    - License: MIT
+"""
+
 from collections import deque
 from random import randint, sample, random
 

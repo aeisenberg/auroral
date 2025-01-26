@@ -25,8 +25,9 @@ import numpy as np
 import torch
 from torchvision import transforms
 
-from auroral import models
-from auroral.game2 import environment, game, render
+from auroral import (
+    models, create_environment, render, frame, load_resources, agent_state
+)
 
 # Change the work directory to retrieve the asset files reliably.
 abspath = os.path.abspath(__file__)
@@ -132,19 +133,20 @@ def create_DQN(configuration: dict) -> models.DQN:
 
 
 def update_screen(
-        env: environment.Environment,
+        env,
         screen: pygame.Surface,
         theme: dict
     ) -> None:
     """Update the game screen used by the agent."""
     screen.fill((0, 0, 0))
     position = env.get_player().position
-    render.isometric(
+    render(
+        configuration["game"],
         env,
         screen,
         theme,
         configuration["screen_dimension"],
-        (position.x, position.y),
+        position,
         DELTA
     )
 
@@ -254,7 +256,7 @@ def print_progress(
 
 
 def observe(
-        env: environment.Environment,
+        env,
         screen: pygame.Surface,
         configuration: dict,
         theme: dict,
@@ -270,7 +272,7 @@ def observe(
 
 
 def create_buffer(
-        env: environment.Environment,
+        env,
         screen: pygame.Surface,
         configuration: dict,
         theme: dict,
@@ -299,7 +301,7 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
     )
     quit = False
     for episode in range(episodes):
-        env = environment.Environment()
+        env = create_environment(configuration["game"])
         buffer = create_buffer(env, screen, configuration, resources)
         for step in range(steps):
             t0 = time()
@@ -309,10 +311,10 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
             state = observe(env, screen, configuration, resources, buffer)
             action = model.act(state, 0.05)
             q = model.q(state)
-            reward, done, lost = game.frame(env, DELTA, action)
+            reward, done, lost = frame(configuration["game"], env, DELTA, action)
             delta = time() - t0
             if not configuration["no_graphics"]:
-                render.agent_state(env, screen, resources)
+                agent_state(configuration["game"], env, screen, resources)
                 if configuration["debug"]:
                     display_debug(meta_screen, episode, step, delta, reward,
                                   0.0, 0.05, state, evaluations, True, q=q)
@@ -343,7 +345,7 @@ def evaluate(screen, model, configuration, evaluations, meta_screen):
 
 configuration = configure()
 screen, meta_screen, font = prepare_game(configuration)
-resources = render.load_resources("assets/")
+resources = load_resources(configuration["game"])
 DELTA = 1.0 / configuration["framerate"]
 N_FRAMES = configuration["n_frames"]
 model = create_DQN(configuration)
@@ -366,7 +368,7 @@ for episode in range(N_EPISODES):
     epsilon = (1.0 - (episode / N_EPISODES) ) * INITIAL_EPSILON
     if episode % 20 == 0:  # Test
         epsilon = 0.05
-    env = environment.Environment()
+    env = create_environment(configuration["game"])
     buffer = create_buffer(env, screen, configuration, resources)
     cumulative_reward = 0.0
     episode_start_time = time()
@@ -377,7 +379,7 @@ for episode in range(N_EPISODES):
         state = observe(env, screen, configuration, resources, buffer)
         action = model.act(state, epsilon)
         q = model.q(state)
-        reward, done, _ = game.frame(env, DELTA, action)
+        reward, done, _ = frame(configuration["game"], env, DELTA, action)
         next_state = observe(env, screen, configuration, resources, buffer)
         model.step(state, action, reward, next_state, done)
         t1 = time()

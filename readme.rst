@@ -15,7 +15,7 @@ Games to Explore Reinforcement Learning
 ---------------------------------------
 
 2D reinforcement learning environments to test machine learning models. You can use the environment
-to train agents or just play the game ``:)``.
+to train agents or just play the games ``:)``.
 
 
 Installation
@@ -66,7 +66,7 @@ The game ``1`` consists in moving a character around a level to collect coins wh
 enemies and unlocking doors:
 
 .. image:: assets/game1.png
-   :width: 400
+   :width: 300
    :align: center
    :alt: Start state of the first game.
 
@@ -74,7 +74,7 @@ You can select a level with the command-line option ``--level <n>``, where ``n``
 11, inclusively. The game ``2`` consists in moving a spaceship and firing enemies to score points:
 
 .. image:: assets/game2.png
-   :width: 400
+   :width: 300
    :align: center
    :alt: Start state of the second game.
 
@@ -109,7 +109,7 @@ Example Training
 ````````````````
 
 .. image:: assets/example.png
-   :width: 400
+   :width: 200
    :align: center
    :alt: RL example.
 
@@ -182,7 +182,7 @@ jeu ``1`` consiste à d.placer un personnage dans un niveau pour collecter des p
 évitant des ennemis :
 
 .. image:: assets/game1.png
-   :width: 400
+   :width: 300
    :align: center
    :alt: Premier jeu.
 
@@ -191,7 +191,7 @@ entre 1 et 11, inclusivement. Le jeu ``2`` consiste à déplacer un vaisseau et 
 ennemis pour marquer des points.
 
 .. image:: assets/game2.png
-   :width: 400
+   :width: 300
    :align: center
    :alt: Second jeu.
 
@@ -222,11 +222,11 @@ précédente. Le répertoire contient déjà  un modèle entraîné que vous pou
    py test.py trained_models\dqn2  # Windows
 
 
-Exemple Simple
+Exemple simple
 ``````````````
 
 .. image:: assets/example.png
-   :width: 400
+   :width: 200
    :align: center
    :alt: Exemple de AR.
 

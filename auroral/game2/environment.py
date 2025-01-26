@@ -165,7 +165,7 @@ class Animation:
 class Environment:
     def __init__(self, use_audio = False):
         self.N_MAX_COINS = 1
-        self.N_MAX_DANGER_ZONES = 1
+        self.N_MAX_DANGER_ZONES = 3
         self.N_MAX_ENEMIES = 3
         self.SCROLL_SPEED = 0.5
         self.player = PlayerAgent()
