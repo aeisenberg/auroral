@@ -105,8 +105,8 @@ repository already contains a trained model, so you can run, for instance:
    py test.py trained_models\dqn2  # Windows
 
 
-Example Training
-````````````````
+Simpler Example
+```````````````
 
 .. image:: assets/example.png
    :width: 200
@@ -123,7 +123,16 @@ training process of a deep Q-Network and inspect the source code. To use it, run
 
 This will train the agent and periodically evaluate it. The script does not take any command-line
 argument, but you are encouraged to modify the parameters written in the source code. This script is
-less daunting than the other RL tasks if you are unfamiliar with neural networks.
+less daunting than the other files if you are unfamiliar with neural networks.
+
+
+Credit
+``````
+
+The following resources were used for this project:
+
+- The images in the ``game 1`` are partially taken from https://opengameart.org/content/zelda-like-tilesets-and-sprites,
+  by user `ArMM1998 <https://opengameart.org/users/armm1998>`_.
 
 
 Jeux 2D pour explorer l'apprentissage par renforcement
@@ -241,3 +250,12 @@ renforcement sur des systèmes peu performants. Exécutez la commande suivante p
 Le script entraîne un modèle et l'évalue périodiquement. Le code source est plus court et plus
 simple à comprendre que les autres tâches dans le dépôt, alors c'est un bon point de départ si vous
 êtes peu familier avec les réseaux neuronaux.
+
+
+Remerciements
+`````````````
+
+Les ressources suivantes ont été utilisées pour réaliser ce projet :
+
+- Les images du jeu ``game 1`` sont partiellement tirées de https://opengameart.org/content/zelda-like-tilesets-and-sprites,
+  par l'utilisateur `ArMM1998 <https://opengameart.org/users/armm1998>`_.
