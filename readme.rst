@@ -5,30 +5,50 @@ Auroral
 - `Français (fr) <#jeux-2D-pour-explorer-lapprentissage-par-renforcement>`_
 
 .. image:: assets/demo.gif
-   :width: 400
+   :width: 500
    :align: center
    :alt: Comparison of the models. On the left, the untrained model scores 1 point over 12 seconds
-      while on the right, the trained model scores 14 points in the same time frame.
+      while on the right, the trained model scores 14 points over the same time frame.
 
 
 Games to Explore Reinforcement Learning
 ---------------------------------------
 
-2D reinforcement learning environment to test reinforcement learning models. You can use the
-environment to train agents or just play the game ``:)``.
+2D reinforcement learning environments to test machine learning models. You can use the environment
+to train agents or just play the game ``:)``.
 
 
 Installation
 ````````````
 
-Execute the following commands to install the environment and dependencies:
+**Prerequisite**: `Python <https://www.python.org/>`_ must be installed on your system.
+
+**First**, execute the following commands to install the repository:
 
 .. code-block:: bash
 
    git clone git@github.com:Vincent-Therrien/auroral.git  # Download the repository.
    cd auroral  # Navigate inside of the repository.
-   pip install basic_requirements.txt  # If you just want to play.
-   pip install rl_requirements.txt  # If you want train and use reinforcement learning agents.
+
+**Second**, create a `virtual environment <https://docs.python.org/3/library/venv.html>`_ and
+install the dependencies:
+
+.. code-block:: bash
+
+   # On Linux:
+   python3 -m venv venv  # Create the virtual environment.
+   source venv/bin/activate  # Activate the virtual environment.
+
+   # On Windows:
+   py -m venv venv  # Create the virtual environment.
+   venv\Scripts\activate  # Activate the virtual environment.
+
+   # On Linux and Windows:
+   pip install requirements.txt  # Install Python dependencies.
+
+**Third**, visit the page https://pytorch.org/get-started/locally/ and follow the instructions to
+install PyTorch in your environment. This is required if you want to train reinforcement learning
+models, but not if you just want to play the games.
 
 
 Usage
@@ -42,18 +62,19 @@ Usage
    py play.py  # Windows
 
 Two games are available. You can select them with the ``--game <1 or 2>`` command-line argument.
-First game:
+The game ``1`` consists in moving a character around a level to collect coins while avoiding
+enemies and unlocking doors:
 
 .. image:: assets/game1.png
-   :width: 200
+   :width: 400
    :align: center
    :alt: Start state of the first game.
 
 You can select a level with the command-line option ``--level <n>``, where ``n`` is between 1 and
-11, inclusively. Second game:
+11, inclusively. The game ``2`` consists in moving a spaceship and firing enemies to score points:
 
 .. image:: assets/game2.png
-   :width: 200
+   :width: 400
    :align: center
    :alt: Start state of the second game.
 
@@ -84,6 +105,139 @@ repository already contains a trained model, so you can run, for instance:
    py test.py trained_models\dqn2  # Windows
 
 
+Example Training
+````````````````
+
+.. image:: assets/example.png
+   :width: 400
+   :align: center
+   :alt: RL example.
+
+The script ``example.py`` is a simple reinforcement learning task intended to quickly explore the
+training process of a deep Q-Network and inspect the source code. To use it, run the command:
+
+.. code-block:: bash
+
+   python3 example.py  # Linux
+   py example.py  # Windows
+
+This will train the agent and periodically evaluate it. The script does not take any command-line
+argument, but you are encouraged to modify the parameters written in the source code. This script is
+less daunting than the other RL tasks if you are unfamiliar with neural networks.
+
+
 Jeux 2D pour explorer l'apprentissage par renforcement
 ------------------------------------------------------
 
+Environnements d'apprentissage automatique 2D pour explorer des techniques d'apprentissage
+automatique. Vous pouvez utiliser les environnements pour entraîner des agents ou juste pour jouer
+``:)``.
+
+
+Installation
+````````````
+
+**Prérequis**: `Python <https://www.python.org/>`_ doit être installé sur votre système.
+
+**Premièrement**, exécuter les commandes suivantes pour installer le projet :
+
+.. code-block:: bash
+
+   git clone git@github.com:Vincent-Therrien/auroral.git  # Télécharger le dépôt.
+   cd auroral  # Naviguer à l'intérieur du répertoire.
+
+**Deuxièmement**, créez un `environnement virtuel <https://docs.python.org/fr/3.13/library/venv.html>`_
+et installez les dépendances :
+
+.. code-block:: bash
+
+   # Avec Linux:
+   python3 -m venv venv  # Créer l'environnement virtual.
+   source venv/bin/activate  # Activer l'environnement virtuel.
+
+   # Avec Windows:
+   py -m venv venv  # Créer l'environnement virtual.
+   venv\Scripts\activate  # Activer l'environnement virtuel.
+
+   # Avec Linux et Windows:
+   pip install requirements.txt  # Installer les dépendances Python.
+
+**Troisièmement**, visitez la page https://pytorch.org/get-started/locally/ et suivez les
+instructions pour installer la bibliothèque PyTorch. Elle est requise pour entraîner des agents
+mais pas pour jouer aux jeux.
+
+
+Usage
+`````
+
+Pour **jouer** :
+
+.. code-block:: bash
+
+   python3 play.py  # Linux
+   py play.py  # Windows
+
+Deux jeux sont disponibles. Vous pouvez les sélectionner avec l'option ``--game <1 or 2>``. Le
+jeu ``1`` consiste à d.placer un personnage dans un niveau pour collecter des points tout en
+évitant des ennemis :
+
+.. image:: assets/game1.png
+   :width: 400
+   :align: center
+   :alt: Premier jeu.
+
+Vous pouvez sélectionner un niveau avec l'option ``--level <n>``, où ``n`` est un nombre compris
+entre 1 et 11, inclusivement. Le jeu ``2`` consiste à déplacer un vaisseau et à tirer sur des
+ennemis pour marquer des points.
+
+.. image:: assets/game2.png
+   :width: 400
+   :align: center
+   :alt: Second jeu.
+
+Pour **entraîner** des agents :
+
+.. code-block:: bash
+
+   python3 train.py <fichier de configuration> --output <répertoire de sortie>  # Linux
+   py train.py <fichier de configuration> --output <répertoire de sortie>  # Windows
+
+Le ``<fichier de configuration>`` est un fichier au format JSON qui paramétrise la session
+d'entraînement. Vous pouvez utiliser, par exemple, le fichier ``training/dqn2.json``. Le
+``<répertoire de sortie>`` est un paramètre optionnel utilisé pour sauvegarder le modèle entraîné.
+
+Pour **tester** un modèle :
+
+.. code-block:: bash
+
+   python3 test.py <répertoire de configuration>  # Linux
+   py test.py <répertoire de configuration>  # Windows
+
+Le ``<répertoire de configuration>`` est le ``<répertoire de sortie>`` fourni à la commande
+précédente. Le répertoire contient déjà  un modèle entraîné que vous pouvez utiliser tel quel :
+
+.. code-block:: bash
+
+   python3 test.py trained_models/dqn2  # Linux
+   py test.py trained_models\dqn2  # Windows
+
+
+Exemple Simple
+``````````````
+
+.. image:: assets/example.png
+   :width: 400
+   :align: center
+   :alt: Exemple de AR.
+
+Le script ``example.py`` est une tâche simple conçue pour explorer rapidement l'apprentissage par
+renforcement sur des systèmes peu performants. Exécutez la commande suivante pour l'utiliser :
+
+.. code-block:: bash
+
+   python3 example.py  # Linux
+   py example.py  # Windows
+
+Le script entraîne un modèle et l'évalue périodiquement. Le code source est plus court et plus
+simple à comprendre que les autres tâches dans le dépôt, alors c'est un bon point de départ si vous
+êtes peu familier avec les réseaux neuronaux.

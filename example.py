@@ -34,19 +34,19 @@ DEVICE = "cuda"  # Use "cpu" if CUDA is not available.
 GAME_SIZE = 8  # Length of the environment.
 GAME_DIMENSIONS = 2  # Dimension of the environment, either 1 or 2.
 N_FRAMES= 4  # Number of game frames fed to the DQN.
-LEARNING_RATE = 1e-3  # Learning rate of the Adam optimizer
-USE_CONVOLUTIONAL_LAYER = True  # Apply a convolutional layer to the input of the DQN
+LEARNING_RATE = 1e-3  # Learning rate of the Adam optimizer.
+USE_CONVOLUTIONAL_LAYER = True  # Apply a convolutional layer to the input of the DQN.
 USE_MEMORY_REPLAY = True  # Use a memory replay buffer.
 
-N_EPISODES = 1000  # Total number of episodes during training
-SCREEN_DIMENSION = (350, 256)  # Dimension of the screen used for visualization
-N_STEPS = GAME_SIZE * GAME_DIMENSIONS * 2  # Maximum number of steps in an episode
-BATCH_SIZE = 32  # Number of data points in a batch
-TARGET_UPDATE_FREQUENCY = 1000  # Update frequency of the target DQN in number of steps
-EVALUATION_FREQUENCY = 1000  # Evaluation frequency in number of steps
-EVALUATION_N_EPISODES = 100  # Number of episodes to test the DQN
-MEMORY_SIZE = 10000  # Size of the memory replay buffer
-GAMMA = 0.99  # Discount factor
+N_EPISODES = 1000  # Total number of episodes to use for training.
+SCREEN_DIMENSION = (350, 256)  # Dimension of the screen used for visualization.
+N_STEPS = GAME_SIZE * GAME_DIMENSIONS * 2  # Maximum number of steps in an episode.
+BATCH_SIZE = 8  # Number of data points in a batch.
+TARGET_UPDATE_FREQUENCY = 100  # Update frequency of the target DQN in number of steps.
+EVALUATION_FREQUENCY = 1000  # Evaluation frequency in number of steps.
+EVALUATION_N_EPISODES = 20  # Number of episodes to test the DQN during an evaluation.
+MEMORY_SIZE = 10000  # Size of the memory replay buffer.
+GAMMA = 0.99  # Discount factor.
 REWARDS = {  # Rewards given to the DQN for each event in the simulation
     "reach objective": 10,
     "move closer to objective": 1,
@@ -56,9 +56,18 @@ REWARDS = {  # Rewards given to the DQN for each event in the simulation
 }
 N_ACTIONS = 4  # Total number of actions
 
+AVERAGE_FOR_RANDOM_MODEL = 0
+if GAME_DIMENSIONS == 1:
+    AVERAGE_FOR_RANDOM_MODEL = GAME_SIZE
+elif GAME_DIMENSIONS == 2:
+    AVERAGE_FOR_RANDOM_MODEL = GAME_SIZE ** 2
 
 # DNQ
 class DQN(nn.Module):
+    """
+    A Deep Q-Network to play the game. Do not edit this class manually;
+    rather, use the parameters defined above to modify it.
+    """
     def __init__(self, n):
         super(DQN, self).__init__()
         n2 = int(n / 2)
@@ -120,6 +129,7 @@ class DQN(nn.Module):
         else:
             if USE_CONVOLUTIONAL_LAYER:
                 if N_FRAMES == 1:
+                    print("Invalid parameters.")
                     exit()
                 else:
                     x = x.unsqueeze(2)
@@ -144,6 +154,11 @@ pygame.display.set_caption("Auroral - Test")
 
 
 class Environment:
+    """
+    The environment for the RL task. It is represented as a Numpy matrix.
+    Empty cells are represented with the value `0`. The agent is represented
+    with the value `0.5`. The objective is represented with the value `1`.
+    """
     def __init__(self, n, dimension):
         self.n = n
         self.dimension = dimension
@@ -188,13 +203,15 @@ class Environment:
             return np.stack(grids, axis=0)
 
     def render(self, screen):
+        """Render the Numpy array representing the environment on screen."""
         normal = (255, 255, 255)
         agent = (255, 0, 0)
         target = (0, 255, 0)
-        s = 8
+        s = 16
+        d = 2
         if self.dimension == 1:
             for i in range(self.n):
-                square = pygame.Rect((s + 1) * (i + 1), s, s, s)
+                square = pygame.Rect((s + d) * (i + d), s, s, s)
                 if i == self.objective:
                     pygame.draw.rect(screen, target, square)
                 elif i == self.agent_position:
@@ -204,7 +221,7 @@ class Environment:
         else:
             for i in range(self.n):
                 for j in range(self.n):
-                    square = pygame.Rect((s + 1) * (i + 1), (s + 1) * (j + 1), s, s)
+                    square = pygame.Rect((s + d) * (i + d), (s + d) * (j + d), s, s)
                     if [i, j] == self.objective:
                         pygame.draw.rect(screen, target, square)
                     elif [i, j] == self.agent_position:
@@ -265,7 +282,12 @@ class Environment:
 
 
 # TRAINING
-policy_net = DQN(GAME_SIZE).to(DEVICE)
+try:
+    policy_net = DQN(GAME_SIZE).to(DEVICE)
+except:
+    print(f"It looks like the device `{DEVICE}` is not available.")
+    print("You can modify the file to use the `cpu` device instead.")
+    exit()
 target_net = DQN(GAME_SIZE).to(DEVICE)
 target_net.load_state_dict(policy_net.state_dict())
 target_net.eval()
@@ -274,6 +296,9 @@ memory = deque(maxlen=MEMORY_SIZE)
 
 
 def select_action(state, epsilon):
+    """Select either a random action or the action with the best Q-value
+    depending on the value of epsilon.
+    """
     if random() < epsilon:
         action = [0 for _ in range(N_ACTIONS)]
         action[randint(0, len(action) - 1)] = 1
@@ -285,6 +310,7 @@ def select_action(state, epsilon):
 
 
 def optimize_model():
+    """Perform backpropagation and gradient descent on the model."""
     if len(memory) < BATCH_SIZE:
         return
 
@@ -300,22 +326,12 @@ def optimize_model():
     # Compute Q-values for current states
     q_values = policy_net(state_batch)
     q_values = action_batch * q_values
-    # print("Q: " + str(q_values[0]))
     q_values = torch.sum(q_values, dim=1)
 
     # Compute target Q-values using the target network
     with torch.no_grad():
         max_next_q_values = target_net(next_state_batch).max(dim=1)[0]
         target_q_values = reward_batch + GAMMA * max_next_q_values * (1 - done_batch)
-
-    # print("S: " + str(state_batch[0]))
-    # print("A: " + str(action_batch[0]))
-    # print("R: " + str(reward_batch[0]))
-    # print("N: " + str(next_state_batch[0]))
-    # print("D: " + str(done_batch[0]))
-    # print("M: " + str(max_next_q_values[0]))
-    # print("T: " + str(target_q_values[0]))
-    # exit()
 
     loss = nn.MSELoss()(q_values, target_q_values)
 
@@ -325,15 +341,15 @@ def optimize_model():
 
 
 def evaluate(slow_down = False):
-    print("EVALUATING")
+    print()
     exit_loop = False
     durations = []
-    for _ in range(EVALUATION_N_EPISODES):
+    for episode in range(EVALUATION_N_EPISODES):
         env = Environment(GAME_SIZE, GAME_DIMENSIONS)
         for step in range(GAME_SIZE * 4):
             # Act
             state = env.observe()
-            action = select_action(state, 0.0)
+            action = select_action(state, 0.05)
             state = torch.FloatTensor(np.stack(np.array([state]), axis=0)).to(DEVICE)
             Q = target_net(state)[0].tolist()
             action = [1 if q == max(Q) else 0 for q in Q]
@@ -350,11 +366,12 @@ def evaluate(slow_down = False):
             if slow_down:
                 sleep(0.01)
         durations.append(step + 1)
+        print(f"\033[FEvaluating the model: {episode + 1} / {EVALUATION_N_EPISODES}. Last result: {step + 1} steps.")
         if exit_loop:
             break
 
     avg = sum(durations) / len(durations)
-    print(f"Average: {avg}")
+    print(f"  Result of the evaluation: {avg} (worst case: {GAME_SIZE * 4})")
     print()
     return avg
 
@@ -390,7 +407,7 @@ for episode in range(N_EPISODES):
                 exit_loop = True
         if done or exit_loop:
             break
-    print(f"\033[FEpisode {episode} finished after {step} steps. {steps_done} steps in total.")
+    print(f"\033[FEpisode {episode} finished after {step} steps. {steps_done} steps in total. Epsilon = {epsilon:.3}")
     if exit_loop:
         break
 
