@@ -143,7 +143,7 @@ DELTA = 1.0 / 30.0  # 1.0 / configuration["framerate"]
 quit = False
 outcomes = []
 scores = []
-for level in range(1, 30):
+for level in range(1, 11):
     env = environment.Environment(False)
     buffer = create_buffer(env, screen, configuration, resources)
     cumulative_reward = 0.0
@@ -174,9 +174,9 @@ for level in range(1, 30):
         outcomes.append("f")
     else:
         outcomes.append("s")
-    print(f"{level}: {scores[-1]} {outcomes[-1]} {step}")
+
+    print(f"Evaluation {level}: {scores[-1]}. Finished after {step} steps.")
     if quit == True:
         break
 
-print(scores)
-print(outcomes)
+print(f"Average score: {np.mean(scores):.3}")

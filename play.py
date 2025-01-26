@@ -74,5 +74,5 @@ ALL_THEMES = [f for f in os.listdir("assets/themes") if f.isnumeric()]
 
 if args.game == 1:
     game1.play(screen, args.level)
-elif args.game == 2:
+elif args.game in (None, 2):
     game2.play(screen)
