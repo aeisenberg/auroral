@@ -143,7 +143,7 @@ Refer to the following papers for more details on reinforcement learning:
 - For DQNs: "Playing Atari with Deep Reinforcement Learning" by Mnih et al (2015): https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf.
 - For CNNs: "ImageNet Classification with Deep Convolutional Neural Networks" by Krizhevsky, Sutskever, and
   Hinton: https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf
-- For backpropagation and gradient descent: "Deep Learning" by Lecun, Bengio and Hinto (2015): https://hal.science/hal-04206682/file/Lecun2015.pdf
+- For backpropagation and gradient descent: "Deep Learning" by Lecun, Bengio and Hinton (2015): https://hal.science/hal-04206682/file/Lecun2015.pdf
 
 
 Jeux 2D pour explorer l'apprentissage par renforcement
@@ -280,4 +280,4 @@ Les articles suivants contiennent des informations complémentaires au projet.
 - DQN : "Playing Atari with Deep Reinforcement Learning" by Mnih et al (2015): https://www.cs.toronto.edu/~vmnih/docs/dqn.pdf.
 - CNN : "ImageNet Classification with Deep Convolutional Neural Networks" by Krizhevsky, Sutskever, and
   Hinton: https://proceedings.neurips.cc/paper_files/paper/2012/file/c399862d3b9d6b76c8436e924a68c45b-Paper.pdf
-- Rétropropagation et descente de gradients : "Deep Learning" by Lecun, Bengio and Hinto (2015): https://hal.science/hal-04206682/file/Lecun2015.pdf
+- Rétropropagation et descente de gradients : "Deep Learning" by Lecun, Bengio and Hinton (2015): https://hal.science/hal-04206682/file/Lecun2015.pdf
