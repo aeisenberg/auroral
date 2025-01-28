@@ -179,6 +179,9 @@ def display_debug(
         is_evaluating = False,
         q=None
     ):
+    """
+    Display debugging information, like the episode and step numbers.
+    """
     meta_screen.fill((20, 20, 20))
     meta_screen.blit(screen, (32, 32))
     display_info(f"Game footage", x=32, y=0)

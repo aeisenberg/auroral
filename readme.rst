@@ -78,7 +78,7 @@ You can select a level with the command-line option ``--level <n>``, where ``n``
    :align: center
    :alt: Start state of the second game.
 
-**Train** a reinforcement learning agents:
+**Train** a reinforcement learning agent:
 
 .. code-block:: bash
 
