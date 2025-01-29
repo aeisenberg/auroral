@@ -17,6 +17,9 @@ Games to Explore Reinforcement Learning
 2D reinforcement learning environments to test machine learning models. You can use the environment
 to train agents or just play the games ``:)``.
 
+This `video <https://www.youtube.com/watch?v=rxLh-qdvbDs>`_ presents the project and explains all
+the steps required for training.
+
 
 Installation
 ````````````
@@ -152,6 +155,9 @@ Jeux 2D pour explorer l'apprentissage par renforcement
 Environnements d'apprentissage par renforcement 2D pour explorer des techniques d'apprentissage
 automatique. Vous pouvez utiliser les environnements pour entraîner des agents ou juste pour jouer
 ``:)``.
+
+Cette `vidéo <https://www.youtube.com/watch?v=rxLh-qdvbDs>`_ présente le projet et explique les
+étapes requises pour entraîner le modèle.
 
 
 Installation
